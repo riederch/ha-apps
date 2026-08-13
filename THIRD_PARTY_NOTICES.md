@@ -26,12 +26,13 @@ The surrounding Home Assistant startup wrapper is maintained in this repository.
 The `vaultwarden` app is derived from Home Assistant Community Apps:
 
 - Project: `hassio-addons/app-vaultwarden`
-- Imported release: `v0.27.0`
-- Vaultwarden image used by that release: `vaultwarden/server:1.36.0`
+- Initial imported release: `v0.27.0`
+- Current Vaultwarden runtime: `vaultwarden/server:1.37.1`
+- Locally published image: `ghcr.io/riederch/ha-apps-vaultwarden`
 - Upstream Home Assistant app integration license: MIT
 - Copyright: 2019-2026 Franck Nijhof
 
-The local copy changes the Home Assistant app version from the upstream development placeholder (`dev`) to `0.27.0` and points the app metadata at `riederch/ha-apps`; the runtime behavior remains based on the upstream release.
+The local copy is independently maintained in `riederch/ha-apps`. It retains the upstream Home Assistant integration structure while updating the Vaultwarden runtime and publishing its own multi-architecture image.
 
 ### MIT License notice
 
@@ -41,4 +42,4 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE.
