@@ -1,0 +1,19 @@
+---
+configuration:
+  log_level:
+    name: Log level
+    description: Controls the level of log details the app provides.
+  ssl:
+    name: SSL
+    description: Enables/Disables SSL (HTTPS) on the web interface.
+  certfile:
+    name: Certificate file
+    description: The certificate file to use for SSL. It must exist in /ssl/.
+  keyfile:
+    name: Private key file
+    description: The private key file to use for SSL. It must exist in /ssl/.
+  request_size_limit:
+    name: Size limit of HTTP requests
+    description: Optionally set the HTTP request size limit. The default is 10485760 (10MB).
+network:
+  7277/tcp: Web interface
