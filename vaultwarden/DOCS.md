@@ -1,6 +1,8 @@
 # Vaultwarden
 
-This Home Assistant app is based on the Home Assistant Community App `hassio-addons/app-vaultwarden` release `v0.27.0` and packages Vaultwarden server `1.36.0`.
+This Home Assistant app is maintained in `riederch/ha-apps` and packages Vaultwarden server `1.37.1`.
+
+The Home Assistant integration is derived from `hassio-addons/app-vaultwarden` and is built as a multi-architecture image for `amd64` and `aarch64` in this repository.
 
 ## Installation
 
@@ -25,10 +27,17 @@ The Web UI is exposed on TCP port `7277`. If SSL is enabled, the certificate and
 
 ## Data
 
-Vaultwarden stores persistent application data in `/data`.
+Vaultwarden stores persistent application data in `/data`. Updating the app image does not replace this persistent data directory.
+
+## Runtime
+
+- Home Assistant app version: `0.28.0`
+- Vaultwarden server: `1.37.1`
+- Image: `ghcr.io/riederch/ha-apps-vaultwarden`
+- Architectures: `amd64`, `aarch64`
 
 ## Upstream
 
-- Home Assistant app: `hassio-addons/app-vaultwarden`, release `v0.27.0`
-- Vaultwarden runtime: `vaultwarden/server:1.36.0`
+- Home Assistant integration base: `hassio-addons/app-vaultwarden`
+- Vaultwarden runtime: `vaultwarden/server:1.37.1`
 - License of the imported Home Assistant app integration: MIT
