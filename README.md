@@ -8,6 +8,7 @@ Eigenes Home-Assistant-App-Repository von Christoph Rieder.
 |---|---|
 | **Gitea** | Selbst gehosteter Git-Server direkt unter Home Assistant OS |
 | **Gitea MCP** | Read-only-fähiger MCP-Zugang zu einer Gitea-Instanz, unter anderem für ChatGPT |
+| **Vaultwarden** | Selbst gehosteter, Bitwarden-kompatibler Passwortmanager; übernommen aus `hassio-addons/app-vaultwarden` v0.27.0 |
 
 ## Repository in Home Assistant hinzufügen
 
@@ -20,12 +21,16 @@ Eigenes Home-Assistant-App-Repository von Christoph Rieder.
    ```
 
 4. Den App-Store aktualisieren.
-5. Danach **Gitea** und **Gitea MCP** aus diesem Repository installieren.
+5. Danach die gewünschten Apps aus diesem Repository installieren.
 
 ## Sicherheit
 
 Für Gitea MCP wird ein Gitea-Zugriffstoken nicht dauerhaft in der App gespeichert. Im HTTP-Modus sendet der jeweilige MCP-Client den Token als Bearer-Token. Für reine Wissensabfragen sollte in Gitea ein Token mit ausschließlich lesenden Rechten verwendet und die MCP-App im Read-only-Modus betrieben werden.
 
+Vaultwarden generiert beim ersten Start einen temporären Admin-Token und zeigt ihn im App-Log an. Dieser sollte unmittelbar im Vaultwarden-Adminbereich gespeichert oder ersetzt werden.
+
 ## Herkunft
 
-Die Gitea-App orientiert sich an der Gitea-App aus [`alexbelgium/hassio-addons`](https://github.com/alexbelgium/hassio-addons/tree/master/gitea), wurde für dieses Repository jedoch eigenständig und reduziert umgesetzt. Details stehen in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Die Gitea-App orientiert sich an der Gitea-App aus [`alexbelgium/hassio-addons`](https://github.com/alexbelgium/hassio-addons/tree/master/gitea), wurde für dieses Repository jedoch eigenständig und reduziert umgesetzt.
+
+Die Vaultwarden-App basiert auf [`hassio-addons/app-vaultwarden`](https://github.com/hassio-addons/app-vaultwarden) Release `v0.27.0` und verwendet Vaultwarden `1.36.0`. Details stehen in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
