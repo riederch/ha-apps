@@ -2,7 +2,7 @@ ARG BUILD_FROM=ghcr.io/hassio-addons/debian-base:9.3.0
 ###############################################################################
 # Get prebuilt containers from Vaultwarden
 ###############################################################################
-FROM "vaultwarden/server:1.36.0" AS vaultwarden
+FROM "vaultwarden/server:1.37.1" AS vaultwarden
 
 ###############################################################################
 # Build the actual app.
@@ -20,8 +20,8 @@ RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends \
         libmariadb-dev-compat=1:11.8.6-0+deb13u1 \
-        libpq5=17.9-0+deb13u1 \
-        nginx=1.26.3-3+deb13u2 \
+        libpq5=17.10-0+deb13u1 \
+        nginx=1.26.3-3+deb13u7 \
         sqlite3=3.46.1-7+deb13u1 \
     && apt-get clean \
     && rm -f -r /etc/nginx \
@@ -44,14 +44,14 @@ LABEL \
     io.hass.arch="${BUILD_ARCH}" \
     io.hass.type="addon" \
     io.hass.version=${BUILD_VERSION} \
-    maintainer="Franck Nijhof <opensource@frenck.dev>" \
+    maintainer="Christoph Rieder" \
     org.opencontainers.image.title="${BUILD_NAME}" \
     org.opencontainers.image.description="${BUILD_DESCRIPTION}" \
-    org.opencontainers.image.vendor="Home Assistant Community Apps" \
-    org.opencontainers.image.authors="Franck Nijhof <opensource@frenck.dev>" \
+    org.opencontainers.image.vendor="riederch/ha-apps" \
+    org.opencontainers.image.authors="Franck Nijhof, Christoph Rieder" \
     org.opencontainers.image.licenses="MIT" \
     org.opencontainers.image.source="https://github.com/${BUILD_REPOSITORY}" \
-    org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}/blob/main/README.md" \
+    org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}/blob/main/vaultwarden/DOCS.md" \
     org.opencontainers.image.created=${BUILD_DATE} \
     org.opencontainers.image.revision=${BUILD_REF} \
     org.opencontainers.image.version=${BUILD_VERSION}
