@@ -2,7 +2,7 @@
 name: Vaultwarden
 version: 0.28.0
 slug: bitwarden
-description: Open source password management solution
+description: Self-hosted Bitwarden-compatible password manager powered by Vaultwarden
 url: https://github.com/riederch/ha-apps/tree/main/vaultwarden
 webui: "[PROTO:ssl]://[HOST]:[PORT:7277]"
 init: false
