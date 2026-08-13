@@ -25,3 +25,4 @@ schema:
   certfile: str
   keyfile: str
   request_size_limit: int?
+image: ghcr.io/hassio-addons/bitwarden
