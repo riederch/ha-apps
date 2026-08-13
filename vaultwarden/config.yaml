@@ -1,6 +1,6 @@
 ---
 name: Vaultwarden
-version: 0.27.0
+version: 0.28.0
 slug: bitwarden
 description: Open source password management solution
 url: https://github.com/riederch/ha-apps/tree/main/vaultwarden
@@ -25,4 +25,4 @@ schema:
   certfile: str
   keyfile: str
   request_size_limit: int?
-image: ghcr.io/hassio-addons/bitwarden
+image: ghcr.io/riederch/ha-apps-vaultwarden
