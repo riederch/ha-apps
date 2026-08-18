@@ -1,5 +1,5 @@
 name: Gitea MCP
-version: "0.1.1"
+version: "0.2.0"
 slug: gitea_mcp
 description: MCP server for direct access to a Gitea instance
 url: https://github.com/riederch/ha-apps/tree/main/gitea_mcp
