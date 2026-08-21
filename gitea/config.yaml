@@ -1,7 +1,7 @@
 name: Gitea
 version: "1.27.1"
 slug: gitea
-description: Self-hosted Git service for Home Assistant
+description: Self-hosted Git hosting with web UI, SSH and persistent repositories for Home Assistant OS
 url: https://github.com/riederch/ha-apps/tree/main/gitea
 arch:
   - aarch64
