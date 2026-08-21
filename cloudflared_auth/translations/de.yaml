@@ -1,0 +1,83 @@
+---
+configuration:
+  log_level:
+    name: Protokollierungsstufe
+    description: >-
+      Legt die Protokollierungsstufe der App fest.
+  external_hostname:
+    name: Externer Home-Assistant-Hostname
+    description: >-
+      Domain oder Subdomain, ueber die Home Assistant durch den Cloudflare
+      Tunnel erreichbar ist.
+  tunnel_name:
+    name: Name des Cloudflare Tunnels
+    description: >-
+      Name des lokal verwalteten Cloudflare Tunnels. Der Standardwert ist fuer
+      die meisten Installationen geeignet.
+  additional_hosts:
+    name: Zusaetzliche Hosts
+    description: >-
+      Zusaetzliche Hostnamen, die durch den Cloudflare Tunnel geroutet werden.
+      Die Authentifizierung ist pro Host optional. Verwende entweder einen
+      Bearer-Token oder beide Basic-Auth-Felder, niemals beide Methoden
+      gleichzeitig.
+    fields:
+      hostname:
+        name: Hostname
+        description: >-
+          Oeffentlicher Hostname, der durch den Cloudflare Tunnel bereitgestellt
+          wird, zum Beispiel api.example.com.
+      service:
+        name: Origin-Dienst
+        description: >-
+          Interne Dienst-URL, zum Beispiel http://192.168.1.20:8080. Bei
+          authentifizierten Hosts muss eine http://- oder https://-URL ohne Pfad
+          verwendet werden.
+      disableChunkedEncoding:
+        name: Chunked Encoding deaktivieren
+        description: >-
+          Deaktiviert HTTP Chunked Transfer Encoding fuer diese Origin-Anfrage.
+      basic_auth_username:
+        name: Basic-Auth-Benutzername
+        description: >-
+          Benutzername, der per HTTP Basic Authentication an den Origin-Dienst
+          gesendet wird. Leer lassen, wenn keine Basic-Authentifizierung benoetigt
+          wird.
+      basic_auth_password:
+        name: Basic-Auth-Passwort
+        description: >-
+          Passwort fuer HTTP Basic Authentication. Fuer Basic Authentication
+          muessen Benutzername und Passwort gesetzt sein.
+      bearer_token:
+        name: Bearer-Token
+        description: >-
+          Token, das als Authorization: Bearer Header an den Origin-Dienst
+          gesendet wird. Leer lassen, wenn keine Bearer-Authentifizierung
+          benoetigt wird.
+  post_quantum:
+    name: Post-Quanten-Kryptografie verwenden
+    description: >-
+      Aktiviert Post-Quanten-Kryptografie fuer den Tunnel. Dadurch wird der
+      Tunnel zugleich auf QUIC beschraenkt, was in manchen Umgebungen zu
+      Verbindungsproblemen fuehren kann.
+  run_parameters:
+    name: Zusaetzliche Cloudflared-Parameter
+    description: >-
+      Optionale zusaetzliche Kommandozeilenparameter fuer Cloudflared.
+  catch_all_service:
+    name: Catch-All-Dienst
+    description: >-
+      Dienst-URL fuer Anfragen, die keinem konfigurierten Hostnamen entsprechen.
+  nginx_proxy_manager:
+    name: Nginx Proxy Manager als Catch-All verwenden
+    description: >-
+      Verwendet die Nginx-Proxy-Manager-App als Catch-All-Dienst.
+  tunnel_token:
+    name: Cloudflare-Tunnel-Token
+    description: >-
+      Token fuer einen remote verwalteten Cloudflare Tunnel. Wenn dieser gesetzt
+      ist, wird die Cloudflare-Remoteverwaltung verwendet und lokale
+      Ingress-Optionen einschliesslich der Host-Authentifizierung werden
+      ignoriert.
+network:
+  36500/tcp: Metrics-Weboberflaeche (36500/tcp)
