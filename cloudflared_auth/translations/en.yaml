@@ -17,9 +17,9 @@ configuration:
   additional_hosts:
     name: Additional hosts
     description: >-
-      Additional hostnames routed through the Cloudflare Tunnel. Authentication
-      is optional per host. Use either a Bearer token or both Basic Auth fields,
-      never both authentication methods at the same time.
+      Additional hostnames routed through the Cloudflare Tunnel. Access
+      authentication is optional per host. Use either a Bearer token or both
+      Basic Auth fields, never both methods at the same time.
     fields:
       hostname:
         name: Hostname
@@ -29,8 +29,8 @@ configuration:
       service:
         name: Origin service
         description: >-
-          Internal service URL, for example http://192.168.1.20:8080. For
-          authenticated hosts, use an http:// or https:// URL without a path.
+          Internal service URL, for example http://192.168.1.20:8080. Protected
+          hosts require an http:// or https:// URL without a path.
       disableChunkedEncoding:
         name: Disable chunked encoding
         description: >-
@@ -38,18 +38,19 @@ configuration:
       basic_auth_username:
         name: Basic Auth username
         description: >-
-          Username sent to the origin using HTTP Basic Authentication. Leave
-          empty unless Basic Authentication is required.
+          Username clients must provide to access this host using HTTP Basic
+          Authentication. Browsers show a login prompt when credentials are
+          missing.
       basic_auth_password:
         name: Basic Auth password
         description: >-
-          Password sent to the origin using HTTP Basic Authentication. Both
-          username and password are required for Basic Authentication.
+          Password required to access this protected host. Both username and
+          password are required for Basic Authentication.
       bearer_token:
         name: Bearer token
         description: >-
-          Token sent to the origin as an Authorization: Bearer header. Leave
-          empty when no Bearer authentication is required.
+          Token a client must send as an Authorization: Bearer header. Requests
+          without the matching token are rejected with HTTP 401.
   post_quantum:
     name: Use post-quantum cryptography
     description: >-
