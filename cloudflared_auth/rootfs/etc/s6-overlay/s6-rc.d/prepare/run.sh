@@ -2,7 +2,7 @@
 # shellcheck shell=bash
 # ==============================================================================
 # Home Assistant App: Cloudflared Origin Auth overlay
-# Extends upstream app-cloudflared with per-additional-host Authorization headers.
+# Adds inbound Basic/Bearer authentication to selected additional hosts.
 # ==============================================================================
 
 UPSTREAM_PREPARE="/etc/s6-overlay/s6-rc.d/prepare/run-upstream.sh"
@@ -13,23 +13,17 @@ if [[ ! -r "${UPSTREAM_PREPARE}" ]]; then
     bashio::exit.nok "Upstream Cloudflared prepare script not found: ${UPSTREAM_PREPARE}"
 fi
 
-# Load the upstream function definitions without executing its final main "$@".
-# app-cloudflared 7.0.13 invokes main unconditionally at the end of the file, so
-# sourcing it directly would run the complete upstream preparation before our
-# wrappers are installed and would make origin authentication ineffective.
+# Load upstream functions without executing the upstream main() call.
 # shellcheck disable=SC1090
 source <(sed '/^main "\$@"$/d' "${UPSTREAM_PREPARE}")
 
-# Keep the upstream validation implementation, but redact the one debug statement
-# that would otherwise print the complete additional_hosts JSON including secrets.
+# Preserve selected upstream functions before overriding them.
 eval "$(
     declare -f validateConfigAndSetVars |
         sed '1s/validateConfigAndSetVars/validateConfigAndSetVars_upstream/' |
         sed 's/bashio::log.debug "Checking host ${additional_host}\.\.\."/bashio::log.debug "Checking configured additional host..."/'
 )"
 
-# Keep the upstream config generator. Our wrapper sanitizes/re-writes
-# additional_hosts before invoking it.
 eval "$(
     declare -f createConfig |
         sed '1s/createConfig/createConfig_upstream/'
@@ -65,9 +59,7 @@ validateOriginAuth() {
         if bashio::var.has_value "${basic_auth_username}" || bashio::var.has_value "${bearer_token}"; then
             case "${service}" in
                 http://*|https://*) ;;
-                *)
-                    bashio::exit.nok "Origin authentication for '${hostname}' requires an http:// or https:// service"
-                    ;;
+                *) bashio::exit.nok "Authentication for '${hostname}' requires an http:// or https:// service" ;;
             esac
 
             if ! [[ ${service} =~ ^https?://[^/]+/?$ ]]; then
@@ -84,7 +76,7 @@ validateOriginAuth() {
 
         if bashio::var.has_value "${bearer_token}" && \
             ! [[ ${bearer_token} =~ ^[A-Za-z0-9._~+/=-]+$ ]]; then
-            bashio::exit.nok "bearer_token for '${hostname}' contains characters outside the Bearer token syntax"
+            bashio::exit.nok "bearer_token for '${hostname}' contains unsupported characters"
         fi
 
         if bashio::var.has_value "${basic_auth_username}"; then
@@ -125,14 +117,38 @@ NGINX
 appendAuthProxyServer() {
     local port="$1"
     local service="${2%/}"
-    local authorization_header="$3"
+    local auth_type="$3"
+    local expected_authorization="$4"
+    local map_name="auth_ok_${port}"
+    local challenge
+
+    if [[ "${auth_type}" == "basic" ]]; then
+        challenge='Basic realm="Cloudflared Origin Auth"'
+    else
+        challenge='Bearer realm="Cloudflared Origin Auth"'
+    fi
 
     cat >>"${AUTH_PROXY_CONFIG}" <<NGINX
 
+    map \$http_authorization \$${map_name} {
+        default 0;
+        "${expected_authorization}" 1;
+    }
+
+    map \$${map_name} \$auth_challenge_${port} {
+        0 "${challenge}";
+        1 "";
+    }
+
     server {
         listen 127.0.0.1:${port};
+        add_header WWW-Authenticate \$auth_challenge_${port} always;
 
         location / {
+            if (\$${map_name} = 0) {
+                return 401;
+            }
+
             set \$origin_service "${service}";
             proxy_pass \$origin_service\$request_uri;
             proxy_http_version 1.1;
@@ -141,7 +157,10 @@ appendAuthProxyServer() {
             proxy_set_header Host \$http_host;
             proxy_set_header Upgrade \$http_upgrade;
             proxy_set_header Connection \$http_connection;
-            proxy_set_header Authorization "${authorization_header}";
+
+            # Credentials authenticate the client at this proxy and are not
+            # forwarded to the protected origin service.
+            proxy_set_header Authorization "";
 
             proxy_ssl_server_name on;
             proxy_ssl_verify off;
@@ -159,7 +178,8 @@ prepareOriginAuthHosts() {
     local basic_auth_username
     local basic_auth_password
     local bearer_token
-    local authorization_header
+    local expected_authorization
+    local auth_type
     local proxy_port
     local proxy_count=0
 
@@ -175,25 +195,28 @@ prepareOriginAuthHosts() {
         sanitized_host=$(bashio::jq "${additional_host}" \
             'del(.basic_auth_username, .basic_auth_password, .bearer_token)')
 
-        authorization_header=""
+        expected_authorization=""
+        auth_type=""
         if bashio::var.has_value "${bearer_token}"; then
-            authorization_header="Bearer ${bearer_token}"
+            auth_type="bearer"
+            expected_authorization="Bearer ${bearer_token}"
         elif bashio::var.has_value "${basic_auth_username}"; then
-            authorization_header="Basic $(printf '%s:%s' "${basic_auth_username}" "${basic_auth_password}" | base64 | tr -d '\n')"
+            auth_type="basic"
+            expected_authorization="Basic $(printf '%s:%s' "${basic_auth_username}" "${basic_auth_password}" | base64 | tr -d '\n')"
         fi
 
-        if bashio::var.has_value "${authorization_header}"; then
+        if bashio::var.has_value "${expected_authorization}"; then
             if [[ ${proxy_count} -eq 0 ]]; then
                 writeAuthProxyHeader
             fi
 
             proxy_port=$((AUTH_PROXY_PORT_BASE + proxy_count))
-            appendAuthProxyServer "${proxy_port}" "${service}" "${authorization_header}"
+            appendAuthProxyServer "${proxy_port}" "${service}" "${auth_type}" "${expected_authorization}"
 
             sanitized_host=$(bashio::jq "${sanitized_host}" \
                 ".service = \"http://127.0.0.1:${proxy_port}\"")
 
-            bashio::log.info "Configured origin Authorization proxy for ${hostname}"
+            bashio::log.info "Enabled ${auth_type} access protection for ${hostname} via 127.0.0.1:${proxy_port}"
             proxy_count=$((proxy_count + 1))
         fi
 
@@ -204,8 +227,10 @@ prepareOriginAuthHosts() {
         printf '%s\n' '}' >>"${AUTH_PROXY_CONFIG}"
         chmod 600 "${AUTH_PROXY_CONFIG}"
         nginx -t -c "${AUTH_PROXY_CONFIG}" >/dev/null || \
-            bashio::exit.nok "Generated origin authentication proxy configuration is invalid"
-        bashio::log.info "Prepared ${proxy_count} authenticated origin host(s)"
+            bashio::exit.nok "Generated authentication proxy configuration is invalid"
+        bashio::log.info "Prepared access protection for ${proxy_count} additional host(s)"
+    else
+        bashio::log.info "No Basic or Bearer protection configured for additional hosts"
     fi
 
     additional_hosts=("${sanitized_hosts[@]}")
@@ -218,9 +243,19 @@ validateConfigAndSetVars() {
 
 createConfig() {
     local -a original_additional_hosts=("${additional_hosts[@]}")
+    local default_config="/tmp/config.json"
 
     prepareOriginAuthHosts
     createConfig_upstream
+
+    if [[ -f "${AUTH_PROXY_CONFIG}" ]]; then
+        local protected_ingress_count
+        protected_ingress_count=$(jq '[.ingress[] | select(.service | startswith("http://127.0.0.1:190"))] | length' "${default_config}")
+        if [[ "${protected_ingress_count}" == "0" ]]; then
+            bashio::exit.nok "Authentication proxy was prepared but no protected ingress route was written to Cloudflared config"
+        fi
+        bashio::log.info "Verified ${protected_ingress_count} protected ingress route(s) in Cloudflared config"
+    fi
 
     additional_hosts=("${original_additional_hosts[@]}")
 }

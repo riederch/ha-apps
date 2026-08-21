@@ -9,7 +9,7 @@ Eigenes Home-Assistant-App-Repository von Christoph Rieder.
 | **Gitea** | Selbst gehosteter Git-Server direkt unter Home Assistant OS |
 | **Gitea MCP** | Read-only-fähiger MCP-Zugang zu einer Gitea-Instanz, unter anderem für ChatGPT |
 | **Vaultwarden** | Selbst gehosteter, Bitwarden-kompatibler Passwortmanager; übernommen aus `hassio-addons/app-vaultwarden` v0.27.0 |
-| **Cloudflared Origin Auth** | Cloudflare Tunnel mit optionalem Basic-/Bearer-`Authorization` für zusätzliche Origin-Hosts |
+| **Cloudflared Origin Auth** | Cloudflare Tunnel mit optionalem Basic-/Bearer-Zugriffsschutz für zusätzliche Hosts |
 
 ## Repository in Home Assistant hinzufügen
 
@@ -30,7 +30,7 @@ Für Gitea MCP wird ein Gitea-Zugriffstoken nicht dauerhaft in der App gespeiche
 
 Vaultwarden generiert beim ersten Start einen temporären Admin-Token und zeigt ihn im App-Log an. Dieser sollte unmittelbar im Vaultwarden-Adminbereich gespeichert oder ersetzt werden.
 
-Cloudflared Origin Auth verwendet für authentifizierte Zusatzhosts einen ausschließlich auf `127.0.0.1` gebundenen Nginx-Proxy im App-Container. Authentifizierungsdaten werden vor der Übergabe an Cloudflared aus dessen Ingress-Konfiguration entfernt und nicht in den Debug-Logs der Host-Konfiguration ausgegeben.
+Cloudflared Origin Auth verwendet für geschützte Zusatzhosts einen ausschließlich auf `127.0.0.1` gebundenen Nginx-Proxy im App-Container. Dieser prüft eingehende Basic- oder Bearer-Zugangsdaten, bevor der Request zum internen Origin-Dienst weitergeleitet wird. Die Zugangsdaten werden nicht an den Origin weitergereicht und nicht in die erzeugte Cloudflared-Ingress-Konfiguration geschrieben.
 
 ## Herkunft
 

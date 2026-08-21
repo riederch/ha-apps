@@ -18,8 +18,8 @@ configuration:
     name: Zusaetzliche Hosts
     description: >-
       Zusaetzliche Hostnamen, die durch den Cloudflare Tunnel geroutet werden.
-      Die Authentifizierung ist pro Host optional. Verwende entweder einen
-      Bearer-Token oder beide Basic-Auth-Felder, niemals beide Methoden
+      Die Zugriffsauthentifizierung ist pro Host optional. Verwende entweder
+      einen Bearer-Token oder beide Basic-Auth-Felder, niemals beide Methoden
       gleichzeitig.
     fields:
       hostname:
@@ -31,7 +31,7 @@ configuration:
         name: Origin-Dienst
         description: >-
           Interne Dienst-URL, zum Beispiel http://192.168.1.20:8080. Bei
-          authentifizierten Hosts muss eine http://- oder https://-URL ohne Pfad
+          geschuetzten Hosts muss eine http://- oder https://-URL ohne Pfad
           verwendet werden.
       disableChunkedEncoding:
         name: Chunked Encoding deaktivieren
@@ -40,20 +40,19 @@ configuration:
       basic_auth_username:
         name: Basic-Auth-Benutzername
         description: >-
-          Benutzername, der per HTTP Basic Authentication an den Origin-Dienst
-          gesendet wird. Leer lassen, wenn keine Basic-Authentifizierung benoetigt
-          wird.
+          Benutzername, den Clients fuer den Zugriff auf diesen Host per HTTP
+          Basic Authentication verwenden muessen. Im Browser erscheint bei
+          fehlenden Zugangsdaten ein Anmeldedialog.
       basic_auth_password:
         name: Basic-Auth-Passwort
         description: >-
-          Passwort fuer HTTP Basic Authentication. Fuer Basic Authentication
-          muessen Benutzername und Passwort gesetzt sein.
+          Passwort fuer den geschuetzten Zugriff auf diesen Host. Fuer Basic
+          Authentication muessen Benutzername und Passwort gesetzt sein.
       bearer_token:
         name: Bearer-Token
         description: >-
-          Token, das als Authorization: Bearer Header an den Origin-Dienst
-          gesendet wird. Leer lassen, wenn keine Bearer-Authentifizierung
-          benoetigt wird.
+          Token, das ein Client als Authorization: Bearer Header mitsenden muss.
+          Requests ohne passenden Token werden mit HTTP 401 abgewiesen.
   post_quantum:
     name: Post-Quanten-Kryptografie verwenden
     description: >-
