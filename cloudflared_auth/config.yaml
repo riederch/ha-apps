@@ -1,10 +1,10 @@
 ---
 name: Cloudflared Origin Auth
-version: "7.0.13-rch3"
+version: "7.0.13-rch4"
 slug: cloudflared_auth
 description: >-
-  Cloudflare Tunnel for Home Assistant with per-origin Basic or Bearer
-  authentication for additional hosts
+  Cloudflare Tunnel for Home Assistant with Basic or Bearer access protection
+  for additional hosts
 url: "https://github.com/riederch/ha-apps/tree/main/cloudflared_auth"
 startup: services
 init: false
