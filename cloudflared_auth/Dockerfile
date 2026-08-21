@@ -4,8 +4,15 @@ FROM ghcr.io/homeassistant-apps/cloudflared/${BUILD_ARCH}:${UPSTREAM_VERSION}
 
 USER root
 
-# nginx is used only as a loopback-bound per-origin header injection proxy.
+ARG BUILD_ARCH=amd64
+ARG CLOUDFLARED_VERSION=2026.8.2
+
+# Keep the latest released Home Assistant Cloudflared app as the integration
+# base, while updating the cloudflared binary to the current upstream release.
 RUN apk add --no-cache nginx \
+    && case "${BUILD_ARCH}" in aarch64) cloudflared_arch="arm64" ;; *) cloudflared_arch="${BUILD_ARCH}" ;; esac \
+    && wget -q -O /usr/bin/cloudflared "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-${cloudflared_arch}" \
+    && chmod 0755 /usr/bin/cloudflared \
     && mv /etc/s6-overlay/s6-rc.d/prepare/run.sh /etc/s6-overlay/s6-rc.d/prepare/run-upstream.sh \
     && mv /run.sh /run-upstream.sh
 
@@ -16,4 +23,4 @@ RUN chmod 0755 \
     /run.sh
 
 LABEL org.opencontainers.image.source="https://github.com/riederch/ha-apps" \
-      org.opencontainers.image.description="Cloudflared Home Assistant app with per-origin Basic/Bearer Authorization support"
+      org.opencontainers.image.description="Cloudflared Home Assistant app with per-host Basic/Bearer access protection"
