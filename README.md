@@ -7,8 +7,8 @@ Eigenes Home-Assistant-App-Repository von Christoph Rieder.
 | App | Zweck |
 |---|---|
 | **Gitea** | Selbst gehosteter Git-Server direkt unter Home Assistant OS |
-| **Gitea MCP** | Read-only-fähiger MCP-Zugang zu einer Gitea-Instanz, unter anderem für ChatGPT |
-| **Vaultwarden** | Selbst gehosteter, Bitwarden-kompatibler Passwortmanager; übernommen aus `hassio-addons/app-vaultwarden` v0.27.0 |
+| **Gitea MCP** | Schlanker Wrapper um den offiziellen Gitea-MCP-Server mit optionalem Read-only-Modus |
+| **Vaultwarden** | Selbst gehosteter, Bitwarden-kompatibler Passwortmanager |
 | **Cloudflared Origin Auth** | Cloudflare Tunnel mit optionalem Basic-/Bearer-Zugriffsschutz für zusätzliche Hosts |
 
 ## Repository in Home Assistant hinzufügen
@@ -26,16 +26,25 @@ Eigenes Home-Assistant-App-Repository von Christoph Rieder.
 
 ## Sicherheit
 
-Für Gitea MCP wird ein Gitea-Zugriffstoken nicht dauerhaft in der App gespeichert. Im HTTP-Modus sendet der jeweilige MCP-Client den Token als Bearer-Token. Für reine Wissensabfragen sollte in Gitea ein Token mit ausschließlich lesenden Rechten verwendet und die MCP-App im Read-only-Modus betrieben werden.
+Für Gitea MCP wird ein Gitea-Zugriffstoken nicht dauerhaft in der App gespeichert. Im HTTP-Modus sendet der jeweilige MCP-Client den Token als Bearer-Token. Für reine Wissensabfragen kann die MCP-App zusätzlich mit `read_only: true` gestartet werden.
 
 Vaultwarden generiert beim ersten Start einen temporären Admin-Token und zeigt ihn im App-Log an. Dieser sollte unmittelbar im Vaultwarden-Adminbereich gespeichert oder ersetzt werden.
 
 Cloudflared Origin Auth verwendet für geschützte Zusatzhosts einen ausschließlich auf `127.0.0.1` gebundenen Nginx-Proxy im App-Container. Dieser prüft eingehende Basic- oder Bearer-Zugangsdaten, bevor der Request zum internen Origin-Dienst weitergeleitet wird. Die Zugangsdaten werden nicht an den Origin weitergereicht und nicht in die erzeugte Cloudflared-Ingress-Konfiguration geschrieben.
 
+## Aktuelle Runtime-Stände
+
+- Gitea: `1.27.2`
+- Gitea MCP: `1.6.0`
+- Vaultwarden: `1.37.1`
+- Cloudflared: `2026.8.2`
+
 ## Herkunft
 
-Die Gitea-App orientiert sich an der Gitea-App aus [`alexbelgium/hassio-addons`](https://github.com/alexbelgium/hassio-addons/tree/master/gitea), wurde für dieses Repository jedoch eigenständig und reduziert umgesetzt.
+Die Gitea-App verwendet die etablierte Gitea-App aus [`alexbelgium/hassio-addons`](https://github.com/alexbelgium/hassio-addons/tree/master/gitea) als Runtime-Image.
 
-Die Vaultwarden-App basiert auf [`hassio-addons/app-vaultwarden`](https://github.com/hassio-addons/app-vaultwarden) Release `v0.27.0` und verwendet Vaultwarden `1.36.0`.
+Gitea MCP verwendet den offiziellen Gitea-MCP-Server `1.6.0` aus `docker.gitea.com/gitea-mcp-server`; der lokale Code ist nur der Home-Assistant-Startwrapper.
+
+Die Vaultwarden-App basiert auf [`hassio-addons/app-vaultwarden`](https://github.com/hassio-addons/app-vaultwarden) und verwendet Vaultwarden `1.37.1`.
 
 Cloudflared Origin Auth ist ein schlanker Overlay-Fork von [`homeassistant-apps/app-cloudflared`](https://github.com/homeassistant-apps/app-cloudflared). Details zu den übernommenen Komponenten stehen in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
