@@ -13,10 +13,12 @@ if [[ ! -r "${UPSTREAM_PREPARE}" ]]; then
     bashio::exit.nok "Upstream Cloudflared prepare script not found: ${UPSTREAM_PREPARE}"
 fi
 
-# Load all upstream functions without executing upstream main().
-# The upstream file guards main() with BASH_SOURCE, so sourcing is safe.
+# Load the upstream function definitions without executing its final main "$@".
+# app-cloudflared 7.0.13 invokes main unconditionally at the end of the file, so
+# sourcing it directly would run the complete upstream preparation before our
+# wrappers are installed and would make origin authentication ineffective.
 # shellcheck disable=SC1090
-source "${UPSTREAM_PREPARE}"
+source <(sed '/^main "\$@"$/d' "${UPSTREAM_PREPARE}")
 
 # Keep the upstream validation implementation, but redact the one debug statement
 # that would otherwise print the complete additional_hosts JSON including secrets.
@@ -68,15 +70,10 @@ validateOriginAuth() {
                     ;;
             esac
 
-            # Authenticated origins are intentionally limited to an origin URL
-            # (scheme + host + optional port). cloudflared service URLs are origin
-            # addresses as well, and this keeps proxy URI handling deterministic.
             if ! [[ ${service} =~ ^https?://[^/]+/?$ ]]; then
                 bashio::exit.nok "Authenticated service for '${hostname}' must not contain a URL path"
             fi
 
-            # The service is inserted into an nginx directive. Reject characters that
-            # could alter nginx configuration. Normal HTTP(S) origin URLs are unaffected.
             if [[ "${service}" == *$'\n'* || "${service}" == *$'\r'* || \
                 "${service}" == *';'* || "${service}" == *'{'* || "${service}" == *'}'* || \
                 "${service}" == *'"'* || "${service}" == *"'"* || "${service}" == *'\\'* || \
@@ -141,16 +138,11 @@ appendAuthProxyServer() {
             proxy_http_version 1.1;
             proxy_buffering off;
 
-            # Preserve the request semantics cloudflared would normally pass through.
             proxy_set_header Host \$http_host;
             proxy_set_header Upgrade \$http_upgrade;
             proxy_set_header Connection \$http_connection;
-
-            # Always replace any client-provided Authorization header.
             proxy_set_header Authorization "${authorization_header}";
 
-            # Match upstream app-cloudflared behavior, which disables origin TLS
-            # verification for its generated ingress rules.
             proxy_ssl_server_name on;
             proxy_ssl_verify off;
         }
@@ -180,7 +172,6 @@ prepareOriginAuthHosts() {
         basic_auth_password=$(bashio::jq "${additional_host}" '.basic_auth_password // ""')
         bearer_token=$(bashio::jq "${additional_host}" '.bearer_token // ""')
 
-        # Never pass our private extension keys into cloudflared itself.
         sanitized_host=$(bashio::jq "${additional_host}" \
             'del(.basic_auth_username, .basic_auth_password, .bearer_token)')
 
@@ -212,7 +203,8 @@ prepareOriginAuthHosts() {
     if [[ ${proxy_count} -gt 0 ]]; then
         printf '%s\n' '}' >>"${AUTH_PROXY_CONFIG}"
         chmod 600 "${AUTH_PROXY_CONFIG}"
-        nginx -t -c "${AUTH_PROXY_CONFIG}" >/dev/null
+        nginx -t -c "${AUTH_PROXY_CONFIG}" >/dev/null || \
+            bashio::exit.nok "Generated origin authentication proxy configuration is invalid"
         bashio::log.info "Prepared ${proxy_count} authenticated origin host(s)"
     fi
 
@@ -230,8 +222,6 @@ createConfig() {
     prepareOriginAuthHosts
     createConfig_upstream
 
-    # createDNS() only needs the hostname, but restore the original data to keep
-    # upstream behavior intact after config generation.
     additional_hosts=("${original_additional_hosts[@]}")
 }
 
