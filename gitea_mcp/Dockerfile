@@ -1,6 +1,6 @@
 FROM docker.gitea.com/gitea-mcp-server:1.6.0 AS upstream
 
-FROM alpine:3.22
+FROM alpine:3.24.1
 
 RUN apk add --no-cache ca-certificates jq
 
