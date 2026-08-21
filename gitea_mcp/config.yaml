@@ -1,7 +1,7 @@
 name: Gitea MCP
-version: "0.2.1"
+version: "1.6.0-rch1"
 slug: gitea_mcp
-description: Model Context Protocol server that exposes a Gitea instance to tools such as ChatGPT
+description: Thin Home Assistant wrapper for the official Gitea MCP server with per-request bearer-token forwarding
 url: https://github.com/riederch/ha-apps/tree/main/gitea_mcp
 arch:
   - aarch64
@@ -16,9 +16,11 @@ ports_description:
 options:
   gitea_host: http://homeassistant.local:3000
   insecure: false
+  read_only: false
   debug: false
 schema:
   gitea_host: url
   insecure: bool
+  read_only: bool
   debug: bool
 watchdog: tcp://[HOST]:[PORT:8080]
