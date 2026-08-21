@@ -136,7 +136,7 @@ appendAuthProxyServer() {
     }
 
     map \$${map_name} \$auth_challenge_${port} {
-        0 "${challenge}";
+        0 '${challenge}';
         1 "";
     }
 
