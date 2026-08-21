@@ -41,6 +41,8 @@ Authenticated hosts currently require an `http://` or `https://` origin URL cons
 
 `bearer_token` and Basic authentication are mutually exclusive for a host. For Basic authentication both `basic_auth_username` and `basic_auth_password` are required.
 
+As in the upstream app, setting `tunnel_token` selects Cloudflare remotely managed tunnel mode and causes the local ingress options to be ignored. Consequently, `additional_hosts` and the origin-auth fields in this app are only effective for locally managed tunnel configuration.
+
 ## Security notes
 
 - The authentication proxy listens only on `127.0.0.1` inside the app container.
