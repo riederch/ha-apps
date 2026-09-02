@@ -21,5 +21,6 @@ if [ "$DEBUG" = "true" ]; then
   set -- "$@" -d
 fi
 
-echo "Starting Gitea MCP 1.6.0 for ${GITEA_HOST} on port 8080"
+echo "Starting Gitea MCP 1.7.0 for ${GITEA_HOST} on port 8080"
+echo "Migration compatibility: endpoint, Home Assistant options and per-request bearer-token forwarding are unchanged"
 exec "$@"

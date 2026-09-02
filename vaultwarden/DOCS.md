@@ -1,6 +1,6 @@
 # Vaultwarden
 
-This Home Assistant app is maintained in `riederch/ha-apps` and packages Vaultwarden server `1.37.1`.
+This Home Assistant app is maintained in `riederch/ha-apps` and packages Vaultwarden server `1.37.2`.
 
 The Home Assistant integration is derived from `hassio-addons/app-vaultwarden` and is built as a multi-architecture image for `amd64` and `aarch64` in this repository.
 
@@ -25,19 +25,29 @@ request_size_limit: 10485760
 
 The Web UI is exposed on TCP port `7277`. If SSL is enabled, the certificate and key must exist below `/ssl`.
 
-## Data
+## Data and migration
 
 Vaultwarden stores persistent application data in `/data`. Updating the app image does not replace this persistent data directory.
 
+When upgrading this app from Vaultwarden 1.37.1 to 1.37.2 and `/data/db.sqlite3` exists, the startup wrapper creates a one-time backup at:
+
+```text
+/data/migration-backups/db.sqlite3.pre-1.37.2
+```
+
+The source database and the backup are checked with SQLite `PRAGMA quick_check`. Vaultwarden then performs its own required database schema migrations when the new server starts. For external PostgreSQL or MariaDB databases, create a database-server backup before upgrading because those databases are not stored inside the app container.
+
+For rollback details see [`../MIGRATIONS.md`](../MIGRATIONS.md).
+
 ## Runtime
 
-- Home Assistant app version: `0.28.0`
-- Vaultwarden server: `1.37.1`
+- Home Assistant app version: `0.29.0`
+- Vaultwarden server: `1.37.2`
 - Image: `ghcr.io/riederch/ha-apps-vaultwarden`
 - Architectures: `amd64`, `aarch64`
 
 ## Upstream
 
 - Home Assistant integration base: `hassio-addons/app-vaultwarden`
-- Vaultwarden runtime: `vaultwarden/server:1.37.1`
+- Vaultwarden runtime: `vaultwarden/server:1.37.2`
 - License of the imported Home Assistant app integration: MIT

@@ -35,15 +35,19 @@ additional_hosts:
 
 Browsers receive an HTTP Basic authentication challenge and prompt for the configured username and password. Requests without valid credentials are rejected with HTTP 401.
 
-## Compatibility
+## Compatibility and migration
 
 Hosts without authentication options are passed through unchanged and use the same Cloudflared ingress path as upstream.
+
+The update from `7.0.13-rch6` to `7.0.14-rch1` keeps all app option names and persistent tunnel paths unchanged. Existing `/data/cert.pem`, `/data/tunnel.json`, host definitions and Basic/Bearer credentials are therefore reused without conversion. The new upstream base contains the Home-Assistant HTTP storage handling from Cloudflared 7.0.14; the local authentication overlay remains additive.
 
 Protected hosts currently require an `http://` or `https://` origin URL consisting only of scheme, host and optional port. URL paths in `service` are rejected for protected hosts.
 
 `bearer_token` and Basic authentication are mutually exclusive for a host. For Basic authentication both `basic_auth_username` and `basic_auth_password` are required.
 
 As in the upstream app, setting `tunnel_token` selects Cloudflare remotely managed tunnel mode and causes the local ingress options to be ignored. Consequently, `additional_hosts` and the access-protection fields in this app are only effective for locally managed tunnel configuration.
+
+For rollback details see [`../MIGRATIONS.md`](../MIGRATIONS.md).
 
 ## Security notes
 
@@ -74,4 +78,5 @@ If any of these stages fails, the app stops instead of starting with an unprotec
 
 ## Upstream
 
-Initial overlay base: `homeassistant-apps/app-cloudflared` 7.0.13.
+Current overlay base: `homeassistant-apps/app-cloudflared` 7.0.14.
+Cloudflared runtime: `2026.8.3`.

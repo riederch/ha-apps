@@ -32,19 +32,23 @@ Vaultwarden generiert beim ersten Start einen temporären Admin-Token und zeigt 
 
 Cloudflared Origin Auth verwendet für geschützte Zusatzhosts einen ausschließlich auf `127.0.0.1` gebundenen Nginx-Proxy im App-Container. Dieser prüft eingehende Basic- oder Bearer-Zugangsdaten, bevor der Request zum internen Origin-Dienst weitergeleitet wird. Die Zugangsdaten werden nicht an den Origin weitergereicht und nicht in die erzeugte Cloudflared-Ingress-Konfiguration geschrieben.
 
+## Migrationen
+
+Bestehende Installationen werden bei Versionswechseln nach Möglichkeit ohne manuelle Neukonfiguration übernommen. Versionsspezifische Hinweise, Rollback-Punkte und unveränderte Datenpfade sind in [`MIGRATIONS.md`](MIGRATIONS.md) dokumentiert.
+
 ## Aktuelle Runtime-Stände
 
 - Gitea: `1.27.2`
-- Gitea MCP: `1.6.0`
-- Vaultwarden: `1.37.1`
-- Cloudflared: `2026.8.2`
+- Gitea MCP: `1.7.0`
+- Vaultwarden: `1.37.2`
+- Cloudflared: `2026.8.3`
 
 ## Herkunft
 
 Die Gitea-App verwendet die etablierte Gitea-App aus [`alexbelgium/hassio-addons`](https://github.com/alexbelgium/hassio-addons/tree/master/gitea) als Runtime-Image.
 
-Gitea MCP verwendet den offiziellen Gitea-MCP-Server `1.6.0` aus `docker.gitea.com/gitea-mcp-server`; der lokale Code ist nur der Home-Assistant-Startwrapper.
+Gitea MCP verwendet den offiziellen Gitea-MCP-Server `1.7.0` aus `docker.gitea.com/gitea-mcp-server`; der lokale Code ist nur der Home-Assistant-Startwrapper.
 
-Die Vaultwarden-App basiert auf [`hassio-addons/app-vaultwarden`](https://github.com/hassio-addons/app-vaultwarden) und verwendet Vaultwarden `1.37.1`.
+Die Vaultwarden-App basiert auf [`hassio-addons/app-vaultwarden`](https://github.com/hassio-addons/app-vaultwarden) und verwendet Vaultwarden `1.37.2`.
 
-Cloudflared Origin Auth ist ein schlanker Overlay-Fork von [`homeassistant-apps/app-cloudflared`](https://github.com/homeassistant-apps/app-cloudflared). Details zu den übernommenen Komponenten stehen in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Cloudflared Origin Auth ist ein schlanker Overlay-Fork von [`homeassistant-apps/app-cloudflared`](https://github.com/homeassistant-apps/app-cloudflared), aktuell auf App-Basis `7.0.14` mit Cloudflared `2026.8.3`. Details zu den übernommenen Komponenten stehen in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

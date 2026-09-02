@@ -1,6 +1,6 @@
 ---
 name: Cloudflared Origin Auth
-version: "7.0.13-rch6"
+version: "7.0.14-rch1"
 slug: cloudflared_auth
 description: >-
   Cloudflare Tunnel for Home Assistant with Basic or Bearer access protection

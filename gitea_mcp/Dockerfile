@@ -1,4 +1,4 @@
-FROM docker.gitea.com/gitea-mcp-server:1.6.0 AS upstream
+FROM docker.gitea.com/gitea-mcp-server:1.7.0 AS upstream
 
 FROM alpine:3.24.1
 

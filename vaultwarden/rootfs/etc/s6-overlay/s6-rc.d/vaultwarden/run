@@ -4,11 +4,51 @@ declare admin_token
 declare log_level
 declare request_size_limit
 declare secret_key
+
 export DATA_FOLDER=/data
 export ROCKET_PORT=80
 export ROCKET_WORKERS=2
+
+backup_sqlite_before_upgrade() {
+    local migration_version="1.37.2"
+    local database="/data/db.sqlite3"
+    local backup_dir="/data/migration-backups"
+    local backup="${backup_dir}/db.sqlite3.pre-${migration_version}"
+    local backup_tmp="${backup}.tmp"
+    local quick_check
+
+    [[ -f "${database}" ]] || return 0
+    [[ -s "${backup}" ]] && return 0
+
+    bashio::log.notice "Preparing one-time SQLite rollback point before Vaultwarden ${migration_version} migration..."
+    quick_check=$(sqlite3 "${database}" 'PRAGMA quick_check;' 2>/dev/null || true)
+    if [[ "${quick_check}" != "ok" ]]; then
+        bashio::exit.nok "Vaultwarden SQLite database failed PRAGMA quick_check; refusing to start the migration"
+    fi
+
+    mkdir -p "${backup_dir}"
+    rm -f "${backup_tmp}"
+    if ! sqlite3 "${database}" ".backup '${backup_tmp}'"; then
+        rm -f "${backup_tmp}"
+        bashio::exit.nok "Failed to create pre-migration Vaultwarden SQLite backup"
+    fi
+
+    quick_check=$(sqlite3 "${backup_tmp}" 'PRAGMA quick_check;' 2>/dev/null || true)
+    if [[ "${quick_check}" != "ok" ]]; then
+        rm -f "${backup_tmp}"
+        bashio::exit.nok "Pre-migration Vaultwarden SQLite backup failed PRAGMA quick_check"
+    fi
+
+    chmod 600 "${backup_tmp}"
+    mv "${backup_tmp}" "${backup}"
+    bashio::log.notice "Created pre-migration SQLite backup: ${backup}"
+}
+
+backup_sqlite_before_upgrade
+
 secret_key=$(openssl rand -base64 32)
 export ROCKET_SECRET_KEY="${secret_key}"
+
 if bashio::config.has_value 'log_level'; then
     case "$(bashio::string.lower "$(bashio::config 'log_level')")" in
         all|trace) log_level="trace" ;;
@@ -20,6 +60,7 @@ if bashio::config.has_value 'log_level'; then
     esac
     export LOG_LEVEL="${log_level}"
 fi
+
 if ! bashio::fs.file_exists '/data/config.json'; then
     admin_token=$(openssl rand -base64 48)
     export ADMIN_TOKEN="${admin_token}"
@@ -29,10 +70,12 @@ if ! bashio::fs.file_exists '/data/config.json'; then
     bashio::log.info "${admin_token}"
     bashio::log.info "Be sure to change it in the admin panel as soon as possible."
 fi
+
 if bashio::config.has_value 'request_size_limit'; then
     request_size_limit=$(bashio::config 'request_size_limit')
     export ROCKET_LIMITS="{json=${request_size_limit}}"
 fi
+
 bashio::log.info 'Starting the Vaultwarden server...'
 cd /opt || bashio::exit.nok
 exec ./vaultwarden
