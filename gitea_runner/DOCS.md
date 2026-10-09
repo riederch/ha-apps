@@ -6,7 +6,7 @@ Der Runner ist fuer vertrauenswuerdige, leichte Workflows gedacht, die direkt im
 
 ## Warum Host-Mode?
 
-Fuer die gemeinsamen Knowledge-Base-Workflows werden vor allem Git, Shell und der in Gitea Runner 5 enthaltene `builtin:checkout` benoetigt. Dafuer ist kein Docker-in-Docker erforderlich.
+Fuer die gemeinsamen Knowledge-Base-Workflows werden vor allem Git, Shell, Python 3 und der in Gitea Runner 5 enthaltene `builtin:checkout` benoetigt. Dafuer ist kein Docker-in-Docker erforderlich.
 
 Der Standard-Label ist:
 
@@ -69,7 +69,9 @@ Fuer Workflows, die Docker-Container, Service-Container oder `docker://` Actions
 
 ## Runtime
 
+- Home Assistant app: `5.0.0-rch2`
 - Gitea Runner: `5.0.0`
+- Python: `3.x` (Alpine package)
 - Upstream image: `docker.io/gitea/runner:5.0.0`
 - Architectures: `amd64`, `aarch64`
 - Default label: `ha-runner:host`
