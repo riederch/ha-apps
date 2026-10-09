@@ -8,6 +8,7 @@ Eigenes Home-Assistant-App-Repository von Christoph Rieder.
 |---|---|
 | **Gitea** | Selbst gehosteter Git-Server direkt unter Home Assistant OS |
 | **Gitea MCP** | Schlanker Wrapper um den offiziellen Gitea-MCP-Server mit optionalem Read-only-Modus |
+| **Gitea Runner** | Schlanker Host-Mode-Wrapper um den offiziellen Gitea Runner für vertrauenswürdige Actions-Jobs |
 | **Vaultwarden** | Selbst gehosteter, Bitwarden-kompatibler Passwortmanager |
 | **Cloudflared Origin Auth** | Cloudflare Tunnel mit optionalem Basic-/Bearer-Zugriffsschutz für zusätzliche Hosts |
 
@@ -28,6 +29,8 @@ Eigenes Home-Assistant-App-Repository von Christoph Rieder.
 
 Für Gitea MCP wird ein Gitea-Zugriffstoken nicht dauerhaft in der App gespeichert. Im HTTP-Modus sendet der jeweilige MCP-Client den Token als Bearer-Token. Für reine Wissensabfragen kann die MCP-App zusätzlich mit `read_only: true` gestartet werden.
 
+Der Gitea Runner läuft standardmäßig im Host-Mode innerhalb seines eigenen Home-Assistant-App-Containers und erhält weder Docker-Socket noch privilegierte Host-Rechte. Er ist für vertrauenswürdige, leichte Workflows mit dem dedizierten Label `ha-runner` gedacht.
+
 Vaultwarden generiert beim ersten Start einen temporären Admin-Token und zeigt ihn im App-Log an. Dieser sollte unmittelbar im Vaultwarden-Adminbereich gespeichert oder ersetzt werden.
 
 Cloudflared Origin Auth verwendet für geschützte Zusatzhosts einen ausschließlich auf `127.0.0.1` gebundenen Nginx-Proxy im App-Container. Dieser prüft eingehende Basic- oder Bearer-Zugangsdaten, bevor der Request zum internen Origin-Dienst weitergeleitet wird. Die Zugangsdaten werden nicht an den Origin weitergereicht und nicht in die erzeugte Cloudflared-Ingress-Konfiguration geschrieben.
@@ -40,6 +43,7 @@ Bestehende Installationen werden bei Versionswechseln nach Möglichkeit ohne man
 
 - Gitea: `1.27.2`
 - Gitea MCP: `1.7.0`
+- Gitea Runner: `5.0.0`
 - Vaultwarden: `1.37.2`
 - Cloudflared: `2026.8.3`
 
@@ -48,6 +52,8 @@ Bestehende Installationen werden bei Versionswechseln nach Möglichkeit ohne man
 Die Gitea-App verwendet die etablierte Gitea-App aus [`alexbelgium/hassio-addons`](https://github.com/alexbelgium/hassio-addons/tree/master/gitea) als Runtime-Image.
 
 Gitea MCP verwendet den offiziellen Gitea-MCP-Server `1.7.0` aus `docker.gitea.com/gitea-mcp-server`; der lokale Code ist nur der Home-Assistant-Startwrapper.
+
+Gitea Runner verwendet den offiziellen Runner `5.0.0` aus `docker.io/gitea/runner`; der lokale Code ergänzt nur Home-Assistant-Konfiguration, persistente Registrierung und einen bewusst unprivilegierten Host-Mode.
 
 Die Vaultwarden-App basiert auf [`hassio-addons/app-vaultwarden`](https://github.com/hassio-addons/app-vaultwarden) und verwendet Vaultwarden `1.37.2`.
 
