@@ -1,5 +1,16 @@
 # Migrationen
 
+## 2026-10-09
+
+### Gitea Runner `5.0.0-rch1` → `5.0.0-rch2`
+
+- Die persistente Runner-Registrierung unter `/data/.runner` bleibt unverändert.
+- Runner-Name, Labels und Gitea-Instanzkonfiguration bleiben unverändert.
+- Das App-Image enthält zusätzlich Python 3 für deterministische Knowledge-Base-Tools und deren Tests.
+- Docker-Socket, Supervisor-Zugriff und privilegierte Rechte bleiben weiterhin deaktiviert.
+
+Ein Rollback auf `5.0.0-rch1` benötigt keine Datenmigration.
+
 Dieses Dokument beschreibt zustandsbehaftete Updates und die dafür vorgesehenen Rollback-Punkte. Ziel ist, bestehende Home-Assistant-App-Installationen ohne Neuinstallation oder Verlust der App-Konfiguration weiterzuführen.
 
 ## 2026-09-02

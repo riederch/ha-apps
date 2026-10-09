@@ -1,5 +1,5 @@
 name: Gitea Runner
-version: "5.0.0-rch1"
+version: "5.0.0-rch2"
 slug: gitea_runner
 description: Official Gitea Runner 5.0.0 for trusted host-mode Actions jobs
 url: https://github.com/riederch/ha-apps/tree/main/gitea_runner
