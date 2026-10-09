@@ -23,6 +23,17 @@ The `gitea_mcp` app wraps the official Gitea MCP server:
 
 The Home Assistant app does not maintain a source fork of Gitea MCP. It copies the official `gitea-mcp` binary into a small Alpine wrapper image and adds only Home Assistant configuration/startup handling. Existing app options and the `/mcp` endpoint are retained across the 1.6.0 to 1.7.0 migration.
 
+## Gitea Runner
+
+The `gitea_runner` app wraps the official Gitea Runner:
+
+- Project: `gitea.com/gitea/runner`
+- Runtime version: `5.0.0`
+- Image source: `docker.io/gitea/runner:5.0.0`
+- Upstream license: MIT
+
+The Home Assistant app does not maintain a source fork of Gitea Runner. It uses the official runner image and adds only Home Assistant configuration, persistent registration handling, and a deliberately unprivileged host-mode execution profile.
+
 ## Vaultwarden Home Assistant App
 
 The `vaultwarden` app is derived from Home Assistant Community Apps:
