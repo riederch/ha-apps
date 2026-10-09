@@ -1,0 +1,24 @@
+name: Gitea Runner
+version: "5.0.0-rch1"
+slug: gitea_runner
+description: Official Gitea Runner 5.0.0 for trusted host-mode Actions jobs
+url: https://github.com/riederch/ha-apps/tree/main/gitea_runner
+arch:
+  - aarch64
+  - amd64
+startup: services
+boot: auto
+init: false
+stage: experimental
+options:
+  gitea_instance_url: http://homeassistant.local:3000
+  registration_token: ""
+  runner_name: homeassistant
+  labels:
+    - ha-runner:host
+schema:
+  gitea_instance_url: url
+  registration_token: password?
+  runner_name: str
+  labels:
+    - str
