@@ -77,3 +77,13 @@ https://gitea-mcp.example.at/mcp
 ```
 
 Der Port `8080` sollte nicht direkt am Router freigegeben werden.
+
+## ChatGPT-Kompatibilitätsfix 1.8.0-rch2
+
+Der integrierte HTTP-Adapter auf Port 8080 leitet alle MCP-Anfragen mit unverändertem Authorization-Header an den lokalen offiziellen Gitea-MCP-Server auf 127.0.0.1:8081 weiter. Er ergänzt bei `get_file_contents` das MCP-`structuredContent` und ein `outputSchema`. Dadurch sollen Clients, die reine MCP-Textantworten verwerfen, Dateiinhalte lesen können.
+
+Für größere Dateien stehen beim **selben Tool** die optionalen Parameter `start_line`, `end_line` und `max_bytes` bereit. Standardmaximum: 65536 Bytes pro Antwort. Bei abgeschnittenen Ergebnissen liefert `next_start_line` die Fortsetzung. Binärdateien werden in Base64 mit `start_byte` und `next_start_byte` übertragen. Die vollständige Antwort des Upstream-Servers wird vor der Abschnittsbildung intern eingelesen (maximal 16 MiB); dies ist **kein serverseitiges Range-Reading**.
+
+Bestehender Endpunkt, Konfiguration, Tokens und Gitea-Daten bleiben erhalten. Der Proxy schreibt keine Tokens oder Datei-Inhalte ins Log. HTTP-Streaming wird transparent weitergegeben und nur für ausgewählte JSON-RPC-Antworten erweitert. Nach dem App-Upgrade den ChatGPT-MCP-Connector erneut verbinden, um die neue Toolschema-Definition abzurufen.
+
+**Einschränkung:** Der Fix behebt eine vermutete Inkompatibilität des Rückgabeformats. Ein vollständiger Ende-zu-Ende-Test mit ChatGPT ist erst möglich, wenn die aktualisierte App installiert und die Verbindung neu hergestellt wurde. Falls ein Fehler auftritt: vorheriges App-Image `1.8.0-rch1` wiederherstellen.
