@@ -28,6 +28,8 @@ jobs:
           bash -n cloudflared_auth/rootfs/etc/s6-overlay/s6-rc.d/prepare/run.sh
           bash -n cloudflared_auth/rootfs/run.sh
           sh -n gitea_mcp/run.sh
+          python3 -m py_compile gitea_mcp/mcp_bridge.py
+          python3 -m unittest discover -s gitea_mcp/tests -v
       - name: Verify Cloudflared upstream prepare import
         shell: bash
         run: |

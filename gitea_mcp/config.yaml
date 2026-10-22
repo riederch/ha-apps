@@ -1,5 +1,5 @@
 name: Gitea MCP
-version: "1.8.0-rch1"
+version: "1.8.0-rch2"
 slug: gitea_mcp
 description: Thin Home Assistant wrapper for the official Gitea MCP server with per-request bearer-token forwarding
 url: https://github.com/riederch/ha-apps/tree/main/gitea_mcp
