@@ -1,5 +1,38 @@
 # Migrationen
 
+## 2026-10-22 – Security and compatibility update
+
+### Vaultwarden `0.29.0` → `0.29.1` / Server `1.37.2` → `1.37.4`
+
+- Security release 1.37.4 addresses organization revocation, 2FA, invitations, attachments and other vulnerabilities; see upstream release notes.
+- The Debian base moves to `9.5.0`; s6 user-service declarations move to `/etc/s6-overlay/user-bundles.d/user/contents.d` per upstream.
+- App data stays under `/data`. On first start with SQLite, a verified one-time snapshot is created at `/data/migration-backups/db.sqlite3.pre-1.37.4` before server startup. Existing `pre-1.37.2` backups are preserved.
+- For external PostgreSQL/MariaDB databases, create a database-server backup before upgrading.
+- Reverse proxy operators: when `IP_HEADER=X-Forwarded-For`, check `IP_HEADER_TRUSTED_PROXIES`; changed trusted-proxy address selection can affect rate limiting and logging.
+
+**Rollback:** Stop the app, restore the matching pre-upgrade database snapshot when the server has already applied schema changes, then use the previous app image. Do not start an older server against a newer migrated database.
+
+### Cloudflared Origin Auth `7.0.14-rch1` → `7.0.19-rch1`
+
+- Upstream HA app base 7.0.19 includes cloudflared `2026.10.3` and its eMudhra certificate-trust security fix. No separate binary download is required.
+- Fixes an incorrect attempt to strip the guarded `main` call while sourcing the upstream prepare script, which could leave an empty Bash `if` block. The import now checks the upstream guard and uses `source` safely.
+- Local tunnel credential paths `/data/cert.pem` and `/data/tunnel.json`, app options and protected-host authentication remain unchanged.
+- After updating, explicitly test protected Basic/Bearer hosts (401 without credentials, normal access with credentials), unprotected hosts, and tunnel reconnects.
+
+**Rollback:** Previous `7.0.14-rch1` app version, preserving /data. Due to the certificate-trust fix, avoid rolling back cloudflared to a vulnerable binary.
+
+### Gitea MCP `1.7.0-rch1` → `1.8.0-rch1`
+
+- Official upstream MCP binary 1.8.0; unchanged local options, TCP port 8080, endpoint `/mcp` and per-request Bearer token forwarding.
+- The app is stateless. Reconnect clients to refresh the advertised MCP tools; validate actual Gitea operations before relying on them.
+
+**Rollback:** Previous `1.7.0-rch1` image, no data migration.
+
+### Unchanged components
+
+- **Gitea** remains at `1.27.2`: current upstream HA image tracks the 28.x release line, requiring a separate server/database migration review and verified backup before enabling an update.
+- **Gitea Runner** stays at `5.0.0-rch2`, already on the current 5.0.0 release.
+
 ## 2026-10-09
 
 ### Gitea Runner `5.0.0-rch1` → `5.0.0-rch2`

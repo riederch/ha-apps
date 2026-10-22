@@ -5,7 +5,7 @@
 # Adds inbound Basic/Bearer authentication to selected additional hosts.
 # ==============================================================================
 
-UPSTREAM_PREPARE="/etc/s6-overlay/s6-rc.d/prepare/run-upstream.sh"
+UPSTREAM_PREPARE="${UPSTREAM_PREPARE:-/etc/s6-overlay/s6-rc.d/prepare/run-upstream.sh}"
 AUTH_PROXY_CONFIG="/tmp/nginx-origin-auth.conf"
 AUTH_PROXY_PORT_BASE=19080
 
@@ -13,9 +13,13 @@ if [[ ! -r "${UPSTREAM_PREPARE}" ]]; then
     bashio::exit.nok "Upstream Cloudflared prepare script not found: ${UPSTREAM_PREPARE}"
 fi
 
-# Load upstream functions without executing the upstream main() call.
+# The upstream script guards main() when sourced. Source it unchanged:
+# removing only the main-call line leaves an empty if-block and breaks Bash.
+if ! grep -Fq 'if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then' "${UPSTREAM_PREPARE}"; then
+    bashio::exit.nok "Upstream Cloudflared prepare entrypoint guard changed; refusing unsafe import"
+fi
 # shellcheck disable=SC1090
-source <(sed '/^main "\$@"$/d' "${UPSTREAM_PREPARE}")
+source "${UPSTREAM_PREPARE}"
 
 # Preserve selected upstream functions before overriding them.
 eval "$(
@@ -260,4 +264,6 @@ createConfig() {
     additional_hosts=("${original_additional_hosts[@]}")
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
