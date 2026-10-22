@@ -17,11 +17,11 @@ The local app definition intentionally retains the upstream image so that Home A
 The `gitea_mcp` app wraps the official Gitea MCP server:
 
 - Project: `gitea.com/gitea/gitea-mcp`
-- Runtime version: `1.7.0`
-- Image source: `docker.gitea.com/gitea-mcp-server:1.7.0`
+- Runtime version: `1.8.0`
+- Image source: `docker.gitea.com/gitea-mcp-server:1.8.0`
 - Upstream license: MIT
 
-The Home Assistant app does not maintain a source fork of Gitea MCP. It copies the official `gitea-mcp` binary into a small Alpine wrapper image and adds only Home Assistant configuration/startup handling. Existing app options and the `/mcp` endpoint are retained across the 1.6.0 to 1.7.0 migration.
+The Home Assistant app does not maintain a source fork of Gitea MCP. It copies the official `gitea-mcp` binary into a small Alpine wrapper image and adds only Home Assistant configuration/startup handling. Existing app options and the `/mcp` endpoint are retained across the 1.6.0 to 1.8.0 migration.
 
 ## Gitea Runner
 
@@ -39,13 +39,13 @@ The Home Assistant app does not maintain a source fork of Gitea Runner. It uses 
 The `vaultwarden` app is derived from Home Assistant Community Apps:
 
 - Project: `hassio-addons/app-vaultwarden`
-- Current Vaultwarden runtime: `vaultwarden/server:1.37.2`
-- Home Assistant Debian base: `ghcr.io/hassio-addons/debian-base:9.4.0`
+- Current Vaultwarden runtime: `vaultwarden/server:1.37.4`
+- Home Assistant Debian base: `ghcr.io/hassio-addons/debian-base:9.5.0`
 - Locally published image: `ghcr.io/riederch/ha-apps-vaultwarden`
 - Upstream Home Assistant app integration license: MIT
 - Copyright: 2019-2026 Franck Nijhof
 
-The local copy is independently maintained in `riederch/ha-apps`. It retains the upstream Home Assistant integration structure while updating the Vaultwarden runtime and publishing its own multi-architecture image. Before the first local SQLite start on Vaultwarden 1.37.2 the wrapper creates a one-time pre-migration database backup.
+The local copy is independently maintained in `riederch/ha-apps`. It retains the upstream Home Assistant integration structure while updating the Vaultwarden runtime and publishing its own multi-architecture image. Before the first local SQLite start on Vaultwarden 1.37.4 the wrapper creates a one-time pre-migration database backup.
 
 ### MIT License notice
 
@@ -62,13 +62,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 The `cloudflared_auth` app is a small overlay derived from the Unofficial Home Assistant Apps Cloudflared integration:
 
 - Project: `homeassistant-apps/app-cloudflared`
-- Released Home Assistant app base: `7.0.14`
-- Cloudflared runtime: `cloudflare/cloudflared` `2026.8.3`
-- Base image: `ghcr.io/homeassistant-apps/cloudflared/{arch}:7.0.14`
+- Released Home Assistant app base: `7.0.19`
+- Cloudflared runtime: `cloudflare/cloudflared` `2026.10.3`
+- Base image: `ghcr.io/homeassistant-apps/cloudflared/{arch}:7.0.19`
 - Upstream Home Assistant app integration license: MIT
 - Copyright: 2026 Unofficial Home Assistant Apps
 
-The local overlay keeps the released Home Assistant Cloudflared integration as its compatibility base, updates the Cloudflared binary to `2026.8.3`, and adds a loopback-only Nginx proxy that enforces optional per-host Basic or Bearer access protection before forwarding requests to internal origin services. Existing tunnel credentials and app options remain compatible with the 7.0.14 base migration.
+The local overlay keeps the released Home Assistant Cloudflared integration as its compatibility base, uses the upstream-patched Cloudflared binary `2026.10.3`, and adds a loopback-only Nginx proxy that enforces optional per-host Basic or Bearer access protection before forwarding requests to internal origin services. Existing tunnel credentials and app options remain compatible with the 7.0.19 base migration.
 
 ### MIT License notice
 

@@ -1,0 +1,82 @@
+name: Home Assistant app build smoke tests
+
+on:
+  pull_request:
+    paths:
+      - "cloudflared_auth/**"
+      - "gitea_mcp/**"
+      - ".github/workflows/app-smoke.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "cloudflared_auth/**"
+      - "gitea_mcp/**"
+      - ".github/workflows/app-smoke.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Validate wrapper shell syntax
+        shell: bash
+        run: |
+          bash -n cloudflared_auth/rootfs/etc/s6-overlay/s6-rc.d/prepare/run.sh
+          bash -n cloudflared_auth/rootfs/run.sh
+          sh -n gitea_mcp/run.sh
+      - name: Verify Cloudflared upstream prepare import
+        shell: bash
+        run: |
+          set -euo pipefail
+          upstream_version="$(sed -n 's/^ARG UPSTREAM_VERSION=//p' cloudflared_auth/Dockerfile | head -1)"
+          test -n "$upstream_version"
+          curl --fail --location --retry 3 --silent --show-error \
+            "https://raw.githubusercontent.com/homeassistant-apps/app-cloudflared/v${upstream_version}/cloudflared/rootfs/etc/s6-overlay/s6-rc.d/prepare/run.sh" \
+            -o "$RUNNER_TEMP/upstream-prepare.sh"
+          bash -n "$RUNNER_TEMP/upstream-prepare.sh"
+          UPSTREAM_PREPARE="$RUNNER_TEMP/upstream-prepare.sh" bash -c '
+            set -euo pipefail
+            source cloudflared_auth/rootfs/etc/s6-overlay/s6-rc.d/prepare/run.sh
+            declare -F validateConfigAndSetVars_upstream >/dev/null
+            declare -F createConfig_upstream >/dev/null
+            declare -F validateOriginAuth >/dev/null
+            if declare -f validateConfigAndSetVars_upstream | grep -Fq "Checking host ${additional_host}..."; then
+              echo "Unsafe logging of full additional_hosts configuration detected" >&2
+              exit 1
+            fi
+          '
+
+  build:
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {arch: amd64, platform: linux/amd64}
+          - {arch: aarch64, platform: linux/arm64}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-qemu-action@v4.2.0
+      - uses: docker/setup-buildx-action@v4.2.0
+      - name: Build Cloudflared Origin Auth
+        shell: bash
+        run: |
+          docker buildx build \
+            --platform "${{ matrix.platform }}" \
+            --build-arg "BUILD_ARCH=${{ matrix.arch }}" \
+            --pull \
+            --file cloudflared_auth/Dockerfile \
+            cloudflared_auth
+      - name: Build Gitea MCP
+        shell: bash
+        run: |
+          docker buildx build \
+            --platform "${{ matrix.platform }}" \
+            --pull \
+            --file gitea_mcp/Dockerfile \
+            gitea_mcp

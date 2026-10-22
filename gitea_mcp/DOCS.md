@@ -1,6 +1,6 @@
 # Gitea MCP
 
-Diese App ist ein schlanker Home-Assistant-Wrapper um den offiziellen Gitea MCP Server `1.7.0`.
+Diese App ist ein schlanker Home-Assistant-Wrapper um den offiziellen Gitea MCP Server `1.8.0`.
 Sie startet den Upstream-Server im Streamable-HTTP-Modus und reicht den vom MCP-Client gesendeten Bearer-Token pro Request an Gitea weiter. Der Token wird nicht in der Home-Assistant-App-Konfiguration gespeichert.
 
 ## Voraussetzungen
@@ -40,11 +40,15 @@ Der Token wird dadurch nicht dauerhaft in der App gespeichert.
 
 ## Migration von 1.6.0
 
-Die App speichert selbst keinen Zustand. Beim Upgrade auf `1.7.0-rch1` bleiben `gitea_host`, `insecure`, `read_only`, `debug`, Port `8080`, `/mcp` und der Bearer-Token-Passthrough unverändert.
+Die App speichert selbst keinen Zustand. Beim Upgrade auf `1.8.0-rch1` bleiben `gitea_host`, `insecure`, `read_only`, `debug`, Port `8080`, `/mcp` und der Bearer-Token-Passthrough unverändert.
 
-Gitea MCP 1.7.0 unterstützt neuere MCP-Protokollstände und hat Änderungen an der angebotenen Tool-Oberfläche. Nach dem Upgrade sollte ein MCP-Client die Verbindung einmal neu aufbauen bzw. seine Tool-Liste neu laden. Eine Datenmigration ist nicht erforderlich.
+Gitea MCP 1.8.0 unterstützt neuere MCP-Protokollstände und hat Änderungen an der angebotenen Tool-Oberfläche. Nach dem Upgrade sollte ein MCP-Client die Verbindung einmal neu aufbauen bzw. seine Tool-Liste neu laden. Eine Datenmigration ist nicht erforderlich.
 
 Weitere Rollback-Hinweise stehen in [`../MIGRATIONS.md`](../MIGRATIONS.md).
+
+## Update auf 1.8.0
+
+Von `1.7.0-rch1` auf `1.8.0-rch1` bleiben App-Optionen und Endpunkt unverändert. Nach dem Neustart muss der MCP-Client seine Tool-Liste neu abfragen; die Funktion der tatsächlich verwendeten Tools ist gegen die Gitea-Instanz zu prüfen.
 
 ## Architektur
 
@@ -53,13 +57,13 @@ MCP-Client
     |
     | Authorization: Bearer <GITEA_TOKEN>
     v
-Gitea MCP 1.7.0 :8080/mcp
+Gitea MCP 1.8.0 :8080/mcp
     |
     v
 Gitea
 ```
 
-Die App enthält keinen eigenen Fork des MCP-Servers und kompiliert keinen fremden Quellcode. Das offizielle Multi-Arch-Image `docker.gitea.com/gitea-mcp-server:1.7.0` dient als Binärquelle; der lokale Wrapper ergänzt nur Home-Assistant-Konfiguration und Startparameter.
+Die App enthält keinen eigenen Fork des MCP-Servers und kompiliert keinen fremden Quellcode. Das offizielle Multi-Arch-Image `docker.gitea.com/gitea-mcp-server:1.8.0` dient als Binärquelle; der lokale Wrapper ergänzt nur Home-Assistant-Konfiguration und Startparameter.
 
 ## ChatGPT
 

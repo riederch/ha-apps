@@ -39,7 +39,7 @@ Browsers receive an HTTP Basic authentication challenge and prompt for the confi
 
 Hosts without authentication options are passed through unchanged and use the same Cloudflared ingress path as upstream.
 
-The update from `7.0.13-rch6` to `7.0.14-rch1` keeps all app option names and persistent tunnel paths unchanged. Existing `/data/cert.pem`, `/data/tunnel.json`, host definitions and Basic/Bearer credentials are therefore reused without conversion. The new upstream base contains the Home-Assistant HTTP storage handling from Cloudflared 7.0.14; the local authentication overlay remains additive.
+The update from `7.0.13-rch6` to `7.0.19-rch1` keeps all app option names and persistent tunnel paths unchanged. Existing `/data/cert.pem`, `/data/tunnel.json`, host definitions and Basic/Bearer credentials are therefore reused without conversion. The new upstream base contains the Home-Assistant HTTP storage handling from Cloudflared 7.0.19; the local authentication overlay remains additive.
 
 Protected hosts currently require an `http://` or `https://` origin URL consisting only of scheme, host and optional port. URL paths in `service` are rejected for protected hosts.
 
@@ -48,6 +48,8 @@ Protected hosts currently require an `http://` or `https://` origin URL consisti
 As in the upstream app, setting `tunnel_token` selects Cloudflare remotely managed tunnel mode and causes the local ingress options to be ignored. Consequently, `additional_hosts` and the access-protection fields in this app are only effective for locally managed tunnel configuration.
 
 For rollback details see [`../MIGRATIONS.md`](../MIGRATIONS.md).
+
+The `7.0.19-rch1` update uses the upstream app's cloudflared `2026.10.3` and includes the certificate trust fix relating to compromised eMudhra intermediate CAs. The upstream prepare script is imported unchanged under its guarded entrypoint to prevent a Bash parse failure. Test protected and unprotected routes after upgrading.
 
 ## Security notes
 
@@ -78,5 +80,5 @@ If any of these stages fails, the app stops instead of starting with an unprotec
 
 ## Upstream
 
-Current overlay base: `homeassistant-apps/app-cloudflared` 7.0.14.
-Cloudflared runtime: `2026.8.3`.
+Current overlay base: `homeassistant-apps/app-cloudflared` 7.0.19.
+Cloudflared runtime: `2026.10.3`.
