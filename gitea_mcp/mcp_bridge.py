@@ -6,6 +6,7 @@ This bridge adds structuredContent and chunked reads for get_file_contents.
 No credentials, file content or request paths are logged or persisted.
 """
 import base64
+import binary_upload
 import binascii
 import http.client
 import json
@@ -99,6 +100,7 @@ def adapt_tool_list(message):
             "type": "integer", "minimum": 1024, "maximum": MAX_OUTPUT_BYTES,
             "description": "Maximum UTF-8 bytes per response; default 65536.",
         }
+    result.setdefault("tools", []).extend(binary_upload.tool_definitions())
     return message
 
 
@@ -269,6 +271,20 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 request = json.loads(body)
             except (ValueError, TypeError):
                 pass
+
+        if request and request.get("method") == "tools/call":
+            name = (request.get("params") or {}).get("name")
+            if name in binary_upload.TOOL_NAMES:
+                auth = self.headers.get("Authorization", "")
+                payload = json.dumps(binary_upload.handle_tool(request, auth), ensure_ascii=False).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(payload)))
+                self.send_header("Connection", "close")
+                self.end_headers()
+                self.wfile.write(payload)
+                self.close_connection = True
+                return
 
         backend_body = body
         if is_file_call(request):
