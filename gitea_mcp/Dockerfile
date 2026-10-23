@@ -7,6 +7,7 @@ RUN apk add --no-cache ca-certificates jq python3
 COPY --from=upstream /app/gitea-mcp /usr/local/bin/gitea-mcp
 COPY run.sh /run.sh
 COPY mcp_bridge.py /usr/local/lib/gitea-mcp-bridge.py
+COPY binary_upload.py /usr/local/lib/binary_upload.py
 
 RUN chmod 0755 /usr/local/bin/gitea-mcp /run.sh
 

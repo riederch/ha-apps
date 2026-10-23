@@ -87,3 +87,40 @@ Für größere Dateien stehen beim **selben Tool** die optionalen Parameter `sta
 Bestehender Endpunkt, Konfiguration, Tokens und Gitea-Daten bleiben erhalten. Der Proxy schreibt keine Tokens oder Datei-Inhalte ins Log. HTTP-Streaming wird transparent weitergegeben und nur für ausgewählte JSON-RPC-Antworten erweitert. Nach dem App-Upgrade den ChatGPT-MCP-Connector erneut verbinden, um die neue Toolschema-Definition abzurufen.
 
 **Einschränkung:** Der Fix behebt eine vermutete Inkompatibilität des Rückgabeformats. Ein vollständiger Ende-zu-Ende-Test mit ChatGPT ist erst möglich, wenn die aktualisierte App installiert und die Verbindung neu hergestellt wurde. Falls ein Fehler auftritt: vorheriges App-Image `1.8.0-rch1` wiederherstellen.
+
+
+## Binaerdatei-Upload (1.8.0-rch3)
+
+Die bestehende Python-Bridge stellt zusaetzlich die MCP-Tools `upload_binary_file`
+(ChatGPT-Datei mit `_meta["openai/fileParams"]`) und `upload_binary_base64`
+(Base64-Fallback, maximal 2 MiB) bereit. Der offizielle Gitea-MCP-Server
+bleibt auf 1.8.0. `read_only: true` entfernt beide Upload-Tools.
+
+Home Assistant App-Optionen:
+
+```yaml
+upload_max_mb: 16
+upload_allowed_hosts: ""
+```
+
+Das Limit ist auf 1 bis 50 MiB begrenzt. Aus Sicherheitsgruenden ist der
+Download per ChatGPT-Datei standardmaessig deaktiviert, bis die **tatsaechlichen**
+HTTPS-Dateihosts als kommagetrennte Liste freigegeben wurden. Beispiel
+(nur verwenden, wenn dieser Host tatsaechlich im Dateiobjekt vorkommt):
+`files.oaiusercontent.com`. Datei-URLs werden nicht geloggt.
+
+Alle Uploads erfordern pro Request einen Bearer-Token, der direkt an die
+Gitea-Contents-API uebergeben wird. Neue Dateien werden via POST angelegt;
+bestehende Dateien nur mit explizit gesetzter aktueller Git-Blob-SHA via PUT
+ersetzt. Die Originalbytes bleiben erhalten und eine SHA-256-Pruefsumme
+wird zurueckgegeben. Der Bridge-Service speichert keine Datei und keinen Token.
+
+Nach der Installation: App neu starten und den MCP-Connector in ChatGPT
+aktualisieren, sodass die neue Tool-Liste abgerufen wird. Eine PDF in einem
+privaten Testrepo hochladen, den Gitea-Download pruefen und SHA-256 vergleichen.
+Falls ChatGPT diese File-Parameter nicht weiterreicht, bleibt die Base64-
+Alternative als Fallback, aber ohne automatische Uebernahme grosser Anhaenge.
+Fuer grosse Archive Git LFS oder Objektspeicher bevorzugen.
+
+Rollback: zur vorherigen App-Version `1.8.0-rch2` wechseln. Keine
+Migration von Gitea-Daten erforderlich.

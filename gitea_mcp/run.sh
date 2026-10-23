@@ -9,6 +9,10 @@ READ_ONLY="$(jq -r '.read_only // false' "$OPTIONS_FILE")"
 DEBUG="$(jq -r '.debug // false' "$OPTIONS_FILE")"
 
 export GITEA_HOST
+export GITEA_MCP_READ_ONLY="$READ_ONLY"
+GITEA_MCP_UPLOAD_MAX_MB="$(jq -r '.upload_max_mb // 16' "$OPTIONS_FILE")"
+GITEA_MCP_UPLOAD_ALLOWED_HOSTS="$(jq -r '.upload_allowed_hosts // ""' "$OPTIONS_FILE")"
+export GITEA_MCP_UPLOAD_MAX_MB GITEA_MCP_UPLOAD_ALLOWED_HOSTS
 export GITEA_INSECURE
 
 set -- /usr/local/bin/gitea-mcp -t http --port 8081 --host "$GITEA_HOST"

@@ -1,5 +1,5 @@
 name: Gitea MCP
-version: "1.8.0-rch2"
+version: "1.8.0-rch3"
 slug: gitea_mcp
 description: Thin Home Assistant wrapper for the official Gitea MCP server with per-request bearer-token forwarding
 url: https://github.com/riederch/ha-apps/tree/main/gitea_mcp
@@ -18,9 +18,13 @@ options:
   insecure: false
   read_only: false
   debug: false
+  upload_max_mb: 16
+  upload_allowed_hosts: ""
 schema:
   gitea_host: url
   insecure: bool
   read_only: bool
   debug: bool
+  upload_max_mb: int(1,50)
+  upload_allowed_hosts: str
 watchdog: tcp://[HOST]:[PORT:8080]
