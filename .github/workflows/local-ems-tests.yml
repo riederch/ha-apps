@@ -4,12 +4,12 @@ on:
   pull_request:
     paths:
       - "custom_components/local_ems/**"
-      - "tests/test_local_ems_peak.py"
+      - "tests/test_local_ems_*.py"
       - ".github/workflows/local-ems-tests.yml"
   push:
     paths:
       - "custom_components/local_ems/**"
-      - "tests/test_local_ems_peak.py"
+      - "tests/test_local_ems_*.py"
 
 jobs:
   core-tests:
@@ -22,4 +22,4 @@ jobs:
       - name: Compile integration files
         run: python -m compileall -q custom_components/local_ems
       - name: Run pure calculation tests
-        run: python -m unittest discover -s tests -p test_local_ems_peak.py -v
+        run: python -m unittest discover -s tests -p 'test_local_ems_*.py' -v

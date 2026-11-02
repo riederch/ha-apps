@@ -77,6 +77,17 @@ Dokumentierte Architektur und Einschränkungen: [`docs/local-ems.md`](docs/local
 
 **Wichtig:** Diese erste Fassung ist kein zugelassener Netzleistungsbegrenzer, sondern eine rein lesende Prognose. Bei unvollständigen Quelldaten werden Berechnungen ausdrücklich als ungültig markiert.
 
+### Local EMS 0.1.0b2 – Anzeige als Integration
+
+Die erste Beta `0.1.0b1` wurde im Manifest versehentlich als
+`integration_type: helper` eingestuft. Home Assistant zeigt solche
+Config-Entries im Bereich **Helfer** statt als eigenständige Integration.
+Version `0.1.0b2` verwendet `integration_type: hub`: Das Local EMS
+erscheint nach HACS-Update und Neustart bei **Einstellungen →
+Geräte & Dienste → Integrationen**. Eine bestehende Konfiguration und
+die Entitäts-IDs werden dabei nicht geändert; vor einer etwaigen
+Neuinstallation bitte zuerst Logeinträge zu `local_ems` prüfen.
+
 ## Lizenzen
 
 **Eigener Quellcode** dieses Repositories, insbesondere `custom_components/local_ems/`, steht unter der **GNU GPL-3.0-or-later**. Der vollständige Lizenztext liegt in [`LICENSE`](LICENSE). Die Abgrenzung gegenüber Fremdcode erläutert [`LICENSE_SCOPE.md`](LICENSE_SCOPE.md).
