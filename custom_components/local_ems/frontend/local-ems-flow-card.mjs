@@ -6,6 +6,8 @@
  * on another dashboard card.
  */
 import { buildFlowModel, formatWatts } from "./flow-model.mjs";
+// Both Local EMS cards are shipped through the same Lovelace JS resource.
+import "./local-ems-peak-gauge-card.mjs";
 
 const TRANSLATIONS = {
   de: {

@@ -38,5 +38,7 @@ jobs:
           node --check custom_components/local_ems/frontend/local-ems-flow-card.mjs
           node --check custom_components/local_ems/frontend/flow-model.mjs
           node --check custom_components/local_ems/frontend/energy-preferences.mjs
+          node --check custom_components/local_ems/frontend/peak-gauge-model.mjs
+          node --check custom_components/local_ems/frontend/local-ems-peak-gauge-card.mjs
       - name: Run energy-flow unit tests
-        run: node --test tests/test-local-ems-flow.mjs
+        run: node --test tests/test-local-ems-flow.mjs tests/test-local-ems-peak-gauge.mjs

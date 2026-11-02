@@ -18,6 +18,10 @@ from .const import (
     CATALOG_SENSORS,
     CONF_ENERGY_SOURCES,
     CONF_GRID_SAFETY,
+    CONF_LIMIT_KW,
+    CONF_WARNING_KW,
+    DEFAULT_LIMIT_KW,
+    DEFAULT_WARNING_KW,
     DOMAIN,
     ENERGY_SOURCE_KEYS,
     GRID_CONTACT_ENTITY,
@@ -94,10 +98,35 @@ class LocalEMSSensor(CoordinatorEntity[LocalEMSCoordinator], SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        return {
+        data = self.coordinator.data
+        attributes = {
             "source_entity": self.coordinator.source,
-            "quarter_start": self.coordinator.data.get("quarter_start"),
+            "quarter_start": data.get("quarter_start"),
         }
+        if self.key == "quality":
+            # Stable, always-available card discovery source. The UI reads
+            # these existing coordinator values and does not poll HA history
+            # or invent a second measurement interval.
+            options = self.coordinator.entry.options
+            attributes["ems_peak_gauge_version"] = 1
+            attributes["ems_peak_summary"] = {
+                "valid": bool(data.get("valid", False)),
+                "quality": data.get("quality", "starting"),
+                "quarter_average_kw": data.get("quarter_average_kw"),
+                "forecast_kw": data.get("forecast_kw"),
+                "committed_kw": data.get("committed_kw"),
+                "energy_kwh": data.get("energy_kwh"),
+                "warning_kw": data.get(
+                    "warning_kw", float(options.get(CONF_WARNING_KW, DEFAULT_WARNING_KW))
+                ),
+                "limit_kw": data.get(
+                    "limit_kw", float(options.get(CONF_LIMIT_KW, DEFAULT_LIMIT_KW))
+                ),
+                "quarter_start": data.get("quarter_start"),
+                "quarter_end": data.get("quarter_end"),
+                "quarter_remaining_seconds": data.get("quarter_remaining_seconds"),
+            }
+        return attributes
 
 
 class LocalEMSCatalogSensor(CoordinatorEntity[LocalEMSCoordinator], SensorEntity):

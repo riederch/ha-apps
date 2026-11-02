@@ -155,6 +155,10 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
         snapshot.update(
             {
                 "quarter_start": quarter.isoformat(),
+                "quarter_end": (quarter + timedelta(minutes=15)).isoformat(),
+                "quarter_remaining_seconds": max(
+                    0, int(((quarter + timedelta(minutes=15)) - now).total_seconds())
+                ),
                 "source": self.source,
                 "limit_kw": limit,
                 "warning_kw": warning,

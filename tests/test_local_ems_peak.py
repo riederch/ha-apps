@@ -21,8 +21,42 @@ class PeakTests(unittest.TestCase):
         r = calculate_peak(values, start + timedelta(minutes=4), start, 9, 10, timedelta(seconds=180))
         self.assertTrue(r.valid)
         self.assertEqual(r.committed_kw, 4)
+        self.assertEqual(r.quarter_average_kw, 15)
         self.assertEqual(r.forecast_kw, 15)
         self.assertEqual(r.minutes_to_limit, 6)
+
+    def test_actual_average_uses_meter_elapsed_time(self):
+        start = datetime(2026, 11, 2, 11, 0, tzinfo=UTC)
+        samples = [
+            Sample(start, 400.0),
+            Sample(start + timedelta(minutes=6), 400.8),
+        ]
+        # Newest sample reports at 11:06, while UI refreshes 5 seconds later.
+        now = start + timedelta(minutes=6, seconds=5)
+        result = calculate_peak(samples, now, start, 9, 10, timedelta(seconds=180))
+        self.assertTrue(result.valid)
+        self.assertAlmostEqual(result.energy_kwh, 0.8)
+        self.assertEqual(result.quarter_average_kw, 8.0)
+        self.assertAlmostEqual(result.committed_kw, 3.2)
+
+    def test_quarter_start_has_no_infinite_or_false_zero_average(self):
+        start = datetime(2026, 11, 2, 11, 0, tzinfo=UTC)
+        result = calculate_peak(
+            [Sample(start, 123.456)], start, start,
+            9, 10, timedelta(seconds=180),
+        )
+        self.assertTrue(result.valid)
+        self.assertIsNone(result.quarter_average_kw)
+        self.assertEqual(result.energy_kwh, 0.0)
+
+    def test_actual_average_is_null_on_stale_meter(self):
+        start = datetime(2026, 11, 2, 11, 0, tzinfo=UTC)
+        r = calculate_peak(
+            [Sample(start, 100.0), Sample(start + timedelta(seconds=30), 100.05)],
+            start + timedelta(minutes=5), start, 9, 10, timedelta(seconds=180),
+        )
+        self.assertFalse(r.valid)
+        self.assertIsNone(r.quarter_average_kw)
 
     def test_missing_start_is_not_zero(self):
         start = datetime(2026, 11, 2, 11, 0, tzinfo=UTC)
