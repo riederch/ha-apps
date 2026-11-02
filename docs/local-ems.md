@@ -174,3 +174,21 @@ automatisch gelöscht oder umbenannt. Keine manuelle Änderung in
 Falls die Integration danach weiterhin fehlt, **Einstellungen → System →
 Protokolle** nach `local_ems` bzw. `custom_components.local_ems` durchsuchen.
 Der Laufzeittest ist getrennt von Manifest-/HACS-CI zu validieren.
+
+## Viertelstunden-Ist-Durchschnitt und Gauge (ab 0.5.0b1)
+
+Neu ist der native Sensor `quarter_average_kw`: tatsächliche bisherige
+Netzbezugsenergie **geteilt durch die bisher gemessene Zeit**.
+Diese Kennzahl ist getrennt von `committed_kw` (`E × 4`) und
+`forecast_kw` (Prognose bis zum Intervallende).
+
+Ein mit Local EMS ausgelieferter, automatisch konfigurierter Gauge nutzt
+die eingestellten Warn- und Grenzwerte, zeigt den Ist-Durchschnitt als
+Zeigerwert und die Prognose darunter. In der HA-Dashboard-Konfiguration
+genügt:
+
+```yaml
+type: custom:local-ems-peak-gauge-card
+```
+
+[Details zum neuen Gauge](local-ems-peak-gauge.md).

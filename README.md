@@ -170,3 +170,24 @@ nicht als momentane W-Werte fehlinterpretiert.** Die Sicherheits-/EPS-Quellen
 bleiben separat konfigurierbar.
 
 [Details zur integrierten Energieflusskarte](docs/local-ems-flow.md).
+
+## Local EMS 0.5.0b1 – 15-Minuten-Ist-Durchschnitt und Gauge
+
+Der native Sensor **Quarter actual average demand** (`quarter_average_kw`)
+berechnet den tatsächlich beobachteten Viertelstunden-Ist-Durchschnitt
+aus seit Intervallbeginn bezogenen kWh geteilt durch die verstrichenen
+Stunden. Er ist ausdrücklich von `committed_kw` (E × 4) und
+`forecast_kw` (Endprognose) getrennt.
+
+Zusätzlich ist ein eigener Gauge enthalten, der Ist-Durchschnitt,
+Prognose, Warnschwelle, Grenze und Restzeit ohne manuelle Quellenzuordnung
+anzeigt:
+
+```yaml
+type: custom:local-ems-peak-gauge-card
+```
+
+Die Karte nutzt die **bereits registrierte Local-EMS-JavaScript-Ressource**
+und vorhandene Daten des HA Coordinators. Kein eigenes Messarchiv, kein
+zusätzliches HACS-Card-Repository und keine neuen Steuerungsbefehle.
+[Beschreibung und Grenzen](docs/local-ems-peak-gauge.md).
