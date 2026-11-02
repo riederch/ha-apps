@@ -1,5 +1,8 @@
-"""UI setup and options for Local EMS. No configuration.yaml required."""
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""UI-driven Local EMS setup and registry administration, without YAML."""
 from __future__ import annotations
+
+from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
@@ -7,19 +10,39 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_CONSUMERS,
+    CONF_ENERGY_SOURCES,
     CONF_LIMIT_KW,
     CONF_SOURCE,
     CONF_STALE_SECONDS,
+    CONF_WALLBOXES,
     CONF_WARNING_KW,
+    CONSUMER_ENABLED,
+    CONSUMER_KIND,
+    CONSUMER_MEASURED_POWER,
+    CONSUMER_MIN_OFF,
+    CONSUMER_MIN_ON,
+    CONSUMER_PRIORITY,
+    CONSUMER_RATED_POWER,
+    CONSUMER_SURPLUS_MARGIN,
+    CONSUMER_SWITCH,
     DEFAULT_LIMIT_KW,
     DEFAULT_SOURCE,
     DEFAULT_STALE_SECONDS,
     DEFAULT_WARNING_KW,
     DOMAIN,
+    ENERGY_SOURCE_KEYS,
+    WALLBOX_CHARGE_POWER,
+    WALLBOX_CHARGE_SWITCH,
+    WALLBOX_CONNECTED,
+    WALLBOX_CURRENT_LIMIT,
+    WALLBOX_MAX_CURRENT,
+    WALLBOX_PHASE_COUNT,
 )
+from .devices import remove_item, save_item, set_sources
 
 
-def _form(source: str, limit: float, warning: float, stale: int) -> vol.Schema:
+def _energy_form(source: str, limit: float, warning: float, stale: int) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(CONF_SOURCE, default=source): selector.EntitySelector(
@@ -38,9 +61,8 @@ def _form(source: str, limit: float, warning: float, stale: int) -> vol.Schema:
     )
 
 
-def _validate(hass, user_input: dict) -> dict[str, str]:
-    source = user_input[CONF_SOURCE]
-    state = hass.states.get(source)
+def _validate_source(hass, user_input: dict) -> dict[str, str]:
+    state = hass.states.get(user_input[CONF_SOURCE])
     if state is None:
         return {"base": "source_missing"}
     if state.attributes.get("unit_of_measurement") not in {"Wh", "kWh"}:
@@ -54,16 +76,108 @@ def _validate(hass, user_input: dict) -> dict[str, str]:
     return {}
 
 
+def _optional_entity(name: str, entity_domain: str, item: dict) -> tuple:
+    """Return an optional HA entity selector with the saved value preselected."""
+    value = item.get(name)
+    # suggested_value is visible but, unlike default, can be cleared in the UI.
+    marker = (
+        vol.Optional(name, description={"suggested_value": value})
+        if value else vol.Optional(name)
+    )
+    return marker, selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=entity_domain)
+    )
+
+
+def _consumer_form(item: dict) -> vol.Schema:
+    schema: dict = {
+        vol.Required("name", default=item.get("name", "")): vol.All(
+            str, vol.Length(min=1, max=80)
+        ),
+        vol.Required(CONSUMER_KIND, default=item.get(CONSUMER_KIND, "heating_rod")):
+            vol.In({
+                "heating_rod": "Heizstab",
+                "fan_heater": "Heizlüfter",
+                "other": "Sonstiger Verbraucher",
+            }),
+        (vol.Required(CONSUMER_SWITCH, default=item[CONSUMER_SWITCH])
+         if item.get(CONSUMER_SWITCH) else vol.Required(CONSUMER_SWITCH)):
+            selector.EntitySelector(selector.EntitySelectorConfig(domain="switch")),
+        vol.Required(CONSUMER_RATED_POWER, default=item.get(CONSUMER_RATED_POWER, 2000)):
+            vol.All(vol.Coerce(float), vol.Range(min=1, max=50000)),
+        vol.Required(CONSUMER_PRIORITY, default=item.get(CONSUMER_PRIORITY, 50)):
+            vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+        vol.Required(CONSUMER_MIN_ON, default=item.get(CONSUMER_MIN_ON, 300)):
+            vol.All(vol.Coerce(int), vol.Range(min=0, max=86400)),
+        vol.Required(CONSUMER_MIN_OFF, default=item.get(CONSUMER_MIN_OFF, 300)):
+            vol.All(vol.Coerce(int), vol.Range(min=0, max=86400)),
+        vol.Required(CONSUMER_SURPLUS_MARGIN,
+                     default=item.get(CONSUMER_SURPLUS_MARGIN, 200)):
+            vol.All(vol.Coerce(int), vol.Range(min=0, max=5000)),
+        vol.Required(CONSUMER_ENABLED, default=item.get(CONSUMER_ENABLED, True)):
+            selector.BooleanSelector(),
+    }
+    schema.update([_optional_entity(CONSUMER_MEASURED_POWER, "sensor", item)])
+    return vol.Schema(schema)
+
+
+def _wallbox_form(item: dict) -> vol.Schema:
+    schema: dict = {
+        vol.Required("name", default=item.get("name", "")): vol.All(
+            str, vol.Length(min=1, max=80)
+        ),
+        vol.Required(CONSUMER_PRIORITY, default=item.get(CONSUMER_PRIORITY, 20)):
+            vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+        vol.Required(WALLBOX_PHASE_COUNT,
+                     default=str(item.get(WALLBOX_PHASE_COUNT, 3))):
+            vol.In({"1": "Einphasig", "3": "Dreiphasig"}),
+        vol.Required(WALLBOX_MAX_CURRENT,
+                     default=item.get(WALLBOX_MAX_CURRENT, 16)):
+            vol.All(vol.Coerce(int), vol.Range(min=6, max=80)),
+        vol.Required(CONSUMER_ENABLED,
+                     default=item.get(CONSUMER_ENABLED, True)):
+            selector.BooleanSelector(),
+    }
+    for key, domain in (
+        (WALLBOX_CHARGE_POWER, "sensor"),
+        (WALLBOX_CHARGE_SWITCH, "switch"),
+        (WALLBOX_CURRENT_LIMIT, "number"),
+        (WALLBOX_CONNECTED, "binary_sensor"),
+    ):
+        schema.update([_optional_entity(key, domain, item)])
+    return vol.Schema(schema)
+
+
+def _sources_form(current: dict) -> vol.Schema:
+    fields = [
+        _optional_entity(key, "sensor", current)
+        for key in ENERGY_SOURCE_KEYS
+    ]
+    return vol.Schema(dict(fields))
+
+
+def _choose_item(items: list[dict]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required("item_id"): vol.In(
+                {
+                    item["id"]: f"{item['name']} ({item.get(CONSUMER_SWITCH) or item.get(WALLBOX_CHARGE_POWER) or item.get(WALLBOX_CHARGE_SWITCH) or item['id']})"
+                    for item in items
+                }
+            )
+        }
+    )
+
+
 class LocalEMSConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Set up a single or multiple monitoring installations."""
-# SPDX-License-Identifier: GPL-3.0-or-later
+    """Initialize the core. All new devices are managed in its options menu."""
 
     VERSION = 1
 
     async def async_step_user(self, user_input: dict | None = None):
         errors = {}
         if user_input is not None:
-            errors = _validate(self.hass, user_input)
+            errors = _validate_source(self.hass, user_input)
             if not errors:
                 await self.async_set_unique_id(user_input[CONF_SOURCE])
                 self._abort_if_unique_id_configured()
@@ -74,14 +188,15 @@ class LocalEMSConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_LIMIT_KW: user_input[CONF_LIMIT_KW],
                         CONF_WARNING_KW: user_input[CONF_WARNING_KW],
                         CONF_STALE_SECONDS: user_input[CONF_STALE_SECONDS],
+                        CONF_CONSUMERS: [],
+                        CONF_WALLBOXES: [],
+                        CONF_ENERGY_SOURCES: {},
                     },
                 )
         return self.async_show_form(
             step_id="user",
-            data_schema=_form(
-                DEFAULT_SOURCE,
-                DEFAULT_LIMIT_KW,
-                DEFAULT_WARNING_KW,
+            data_schema=_energy_form(
+                DEFAULT_SOURCE, DEFAULT_LIMIT_KW, DEFAULT_WARNING_KW,
                 DEFAULT_STALE_SECONDS,
             ),
             errors=errors,
@@ -94,34 +209,199 @@ class LocalEMSConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class LocalEMSOptionsFlow(config_entries.OptionsFlow):
-    """Configure thresholds and timeout without YAML."""
+    """Add, update and remove consumers / wallboxes in the HA configuration UI."""
+
+    def __init__(self) -> None:
+        self._selected_id: str | None = None
+
+    def _items(self, category: str) -> list[dict]:
+        return list(self.config_entry.options.get(category, []))
+
+    def _finish(self, options: dict) -> dict:
+        return self.async_create_entry(title="", data=options)
+
+    def _save_item(
+        self, kind: str, user_input: dict, selected_id: str | None = None
+    ) -> dict:
+        payload = dict(user_input)
+        if kind == CONF_WALLBOXES:
+            payload[WALLBOX_PHASE_COUNT] = int(payload[WALLBOX_PHASE_COUNT])
+        try:
+            options = save_item(dict(self.config_entry.options), kind, payload, selected_id)
+        except ValueError as err:
+            raise ValueError(str(err)) from err
+        return self._finish(options)
 
     async def async_step_init(self, user_input: dict | None = None):
-        entry = self.config_entry
-        options = entry.options
-        source = entry.data[CONF_SOURCE]
+        choices = ["peak_settings", "energy_sources", "add_consumer", "add_wallbox"]
+        if self._items(CONF_CONSUMERS):
+            choices += ["edit_consumer", "remove_consumer"]
+        if self._items(CONF_WALLBOXES):
+            choices += ["edit_wallbox", "remove_wallbox"]
+        return self.async_show_menu(step_id="init", menu_options=choices)
+
+    async def async_step_peak_settings(self, user_input: dict | None = None):
+        opts = self.config_entry.options
         errors = {}
         if user_input is not None:
-            user_input[CONF_SOURCE] = source
-            errors = _validate(self.hass, user_input)
+            data = {**user_input, CONF_SOURCE: self.config_entry.data[CONF_SOURCE]}
+            errors = _validate_source(self.hass, data)
             if not errors:
-                user_input.pop(CONF_SOURCE, None)
-                return self.async_create_entry(title="", data=user_input)
-        schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_LIMIT_KW, default=options.get(CONF_LIMIT_KW, DEFAULT_LIMIT_KW)
-                ): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=100)),
-                vol.Required(
-                    CONF_WARNING_KW,
-                    default=options.get(CONF_WARNING_KW, DEFAULT_WARNING_KW),
-                ): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=100)),
-                vol.Required(
-                    CONF_STALE_SECONDS,
-                    default=options.get(CONF_STALE_SECONDS, DEFAULT_STALE_SECONDS),
-                ): vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
-            }
-        )
+                updated = dict(opts)
+                updated.update(user_input)
+                return self._finish(updated)
         return self.async_show_form(
-            step_id="init", data_schema=schema, errors=errors
+            step_id="peak_settings",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_LIMIT_KW, default=opts.get(CONF_LIMIT_KW, DEFAULT_LIMIT_KW)
+                    ): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=100)),
+                    vol.Required(
+                        CONF_WARNING_KW,
+                        default=opts.get(CONF_WARNING_KW, DEFAULT_WARNING_KW),
+                    ): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=100)),
+                    vol.Required(
+                        CONF_STALE_SECONDS,
+                        default=opts.get(CONF_STALE_SECONDS, DEFAULT_STALE_SECONDS),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_energy_sources(self, user_input: dict | None = None):
+        if user_input is not None:
+            return self._finish(
+                set_sources(dict(self.config_entry.options), user_input)
+            )
+        return self.async_show_form(
+            step_id="energy_sources",
+            data_schema=_sources_form(
+                dict(self.config_entry.options.get(CONF_ENERGY_SOURCES, {}))
+            ),
+        )
+
+    async def async_step_add_consumer(self, user_input: dict | None = None):
+        errors = {}
+        if user_input is not None:
+            try:
+                return self._save_item(CONF_CONSUMERS, user_input)
+            except ValueError as err:
+                errors = {"base": str(err)}
+        return self.async_show_form(
+            step_id="add_consumer", data_schema=_consumer_form({}), errors=errors
+        )
+
+    async def async_step_edit_consumer(self, user_input: dict | None = None):
+        items = self._items(CONF_CONSUMERS)
+        if user_input is not None:
+            self._selected_id = user_input["item_id"]
+            return await self.async_step_consumer_details()
+        return self.async_show_form(
+            step_id="edit_consumer", data_schema=_choose_item(items)
+        )
+
+    async def async_step_consumer_details(self, user_input: dict | None = None):
+        current = next(
+            (r for r in self._items(CONF_CONSUMERS) if r["id"] == self._selected_id),
+            None,
+        )
+        if current is None:
+            return self.async_abort(reason="item_not_found")
+        errors = {}
+        if user_input is not None:
+            try:
+                return self._save_item(CONF_CONSUMERS, user_input, self._selected_id)
+            except ValueError as err:
+                errors = {"base": str(err)}
+        return self.async_show_form(
+            step_id="consumer_details", data_schema=_consumer_form(current),
+            errors=errors,
+        )
+
+    async def async_step_remove_consumer(self, user_input: dict | None = None):
+        if user_input is not None:
+            self._selected_id = user_input["item_id"]
+            return await self.async_step_confirm_remove_consumer()
+        return self.async_show_form(
+            step_id="remove_consumer",
+            data_schema=_choose_item(self._items(CONF_CONSUMERS)),
+        )
+
+    async def async_step_confirm_remove_consumer(
+        self, user_input: dict | None = None
+    ):
+        if user_input is not None:
+            try:
+                updated = remove_item(
+                    dict(self.config_entry.options), CONF_CONSUMERS,
+                    self._selected_id,
+                )
+            except ValueError:
+                return self.async_abort(reason="item_not_found")
+            return self._finish(updated)
+        return self.async_show_form(
+            step_id="confirm_remove_consumer", data_schema=vol.Schema({})
+        )
+
+    async def async_step_add_wallbox(self, user_input: dict | None = None):
+        errors = {}
+        if user_input is not None:
+            try:
+                return self._save_item(CONF_WALLBOXES, user_input)
+            except ValueError as err:
+                errors = {"base": str(err)}
+        return self.async_show_form(
+            step_id="add_wallbox", data_schema=_wallbox_form({}), errors=errors
+        )
+
+    async def async_step_edit_wallbox(self, user_input: dict | None = None):
+        if user_input is not None:
+            self._selected_id = user_input["item_id"]
+            return await self.async_step_wallbox_details()
+        return self.async_show_form(
+            step_id="edit_wallbox",
+            data_schema=_choose_item(self._items(CONF_WALLBOXES)),
+        )
+
+    async def async_step_wallbox_details(self, user_input: dict | None = None):
+        current = next(
+            (r for r in self._items(CONF_WALLBOXES) if r["id"] == self._selected_id),
+            None,
+        )
+        if current is None:
+            return self.async_abort(reason="item_not_found")
+        errors = {}
+        if user_input is not None:
+            try:
+                return self._save_item(CONF_WALLBOXES, user_input, self._selected_id)
+            except ValueError as err:
+                errors = {"base": str(err)}
+        return self.async_show_form(
+            step_id="wallbox_details", data_schema=_wallbox_form(current),
+            errors=errors,
+        )
+
+    async def async_step_remove_wallbox(self, user_input: dict | None = None):
+        if user_input is not None:
+            self._selected_id = user_input["item_id"]
+            return await self.async_step_confirm_remove_wallbox()
+        return self.async_show_form(
+            step_id="remove_wallbox",
+            data_schema=_choose_item(self._items(CONF_WALLBOXES)),
+        )
+
+    async def async_step_confirm_remove_wallbox(self, user_input: dict | None = None):
+        if user_input is not None:
+            try:
+                updated = remove_item(
+                    dict(self.config_entry.options), CONF_WALLBOXES,
+                    self._selected_id,
+                )
+            except ValueError:
+                return self.async_abort(reason="item_not_found")
+            return self._finish(updated)
+        return self.async_show_form(
+            step_id="confirm_remove_wallbox", data_schema=vol.Schema({})
         )

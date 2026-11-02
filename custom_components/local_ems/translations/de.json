@@ -14,10 +14,20 @@
       }
     },
     "error": {
-      "source_missing": "Entität nicht gefunden",
-      "source_unit": "Quelle muss Wh oder kWh liefern",
-      "source_unavailable": "Quelle liefert keinen numerischen Wert",
-      "warning_above_limit": "Vorwarnschwelle muss unter der Grenze liegen"
+      "source_missing": "Quell-Entität nicht gefunden",
+      "source_unit": "Energiequelle muss Wh oder kWh liefern",
+      "source_unavailable": "Energiequelle ist nicht verfügbar oder nicht numerisch",
+      "warning_above_limit": "Vorwarnung muss unter der Leistungsgrenze liegen",
+      "name_required": "Eine Bezeichnung ist erforderlich",
+      "invalid_collection": "Ungültige Gerätekategorie",
+      "invalid_entity_domain": "Die Entität hat einen falschen Typ",
+      "switch_required": "Ein Schalter ist erforderlich",
+      "power_required": "Nennleistung muss 1–50000 W betragen",
+      "wallbox_entity_required": "Mindestens eine Wallbox-Entität auswählen",
+      "invalid_phase_count": "Bitte 1 oder 3 Phasen wählen",
+      "duplicate_entity": "Diese Entität ist bereits hinterlegt",
+      "duplicate_id": "Doppelte interne Geräte-ID",
+      "unknown_item": "Das Gerät wurde nicht gefunden"
     },
     "abort": {
       "already_configured": "Diese Datenquelle wurde bereits konfiguriert"
@@ -26,19 +36,151 @@
   "options": {
     "step": {
       "init": {
-        "title": "Peak-Monitor-Einstellungen",
+        "title": "Local EMS – Geräteverwaltung",
+        "menu_options": {
+          "peak_settings": "Spitzenwert-Überwachung",
+          "energy_sources": "Energie-Messwerte zuordnen",
+          "add_consumer": "Schaltverbraucher hinzufügen",
+          "edit_consumer": "Schaltverbraucher bearbeiten",
+          "remove_consumer": "Schaltverbraucher entfernen",
+          "add_wallbox": "Wallbox hinzufügen",
+          "edit_wallbox": "Wallbox bearbeiten",
+          "remove_wallbox": "Wallbox entfernen"
+        }
+      },
+      "peak_settings": {
+        "title": "Spitzenwert-Überwachung",
+        "description": "Einstellungen für den bestehenden 15-Minuten-Peak-Monitor.",
         "data": {
-          "limit_kw": "Viertelstunden-Leistungsgrenze (kW)",
+          "limit_kw": "Leistungsgrenze (kW)",
           "warning_kw": "Vorwarnschwelle (kW)",
           "stale_seconds": "Maximales Messwertalter (Sekunden)"
         }
+      },
+      "energy_sources": {
+        "title": "Energie-Messwerte zuordnen",
+        "description": "Optional: Quellen für Netz, PV, Haus und Batterie. Netzleistung muss positiv bei Bezug und negativ bei Einspeisung sein. Es werden noch keine Geräte geschaltet.",
+        "data": {
+          "grid_power_sensor": "Netzleistung (+Bezug/-Einspeisung)",
+          "pv_power_sensor": "PV-Leistung",
+          "house_power_sensor": "Hausverbrauch",
+          "battery_power_sensor": "Batterieleistung (+Entladen/-Laden)",
+          "battery_soc_sensor": "Batterie-Ladestand (SoC)"
+        }
+      },
+      "add_consumer": {
+        "title": "Schaltverbraucher hinzufügen",
+        "description": "Mehrere Heizstäbe und Heizlüfter können unabhängig angelegt werden. Leistungs- und Schaltparameter sind zunächst nur für die spätere Regelung gespeichert.",
+        "data": {
+          "name": "Bezeichnung",
+          "consumer_type": "Verbrauchertyp",
+          "switch_entity": "Home-Assistant-Schalter",
+          "power_sensor": "Optionaler Leistungssensor",
+          "rated_power_w": "Nennleistung (W)",
+          "priority": "Priorität (1 = zuerst)",
+          "min_on_seconds": "Mindest-Einschaltdauer (Sekunden)",
+          "min_off_seconds": "Mindest-Ausschaltdauer (Sekunden)",
+          "surplus_margin_w": "Zusätzliche Überschussreserve (W)",
+          "enabled": "Für spätere Planung berücksichtigen (noch kein Schalten)"
+        }
+      },
+      "consumer_details": {
+        "title": "Schaltverbraucher bearbeiten",
+        "description": "Verbraucher ändern. Die reale Schalterstellung wird nicht verändert.",
+        "data": {
+          "name": "Bezeichnung",
+          "consumer_type": "Verbrauchertyp",
+          "switch_entity": "Home-Assistant-Schalter",
+          "power_sensor": "Optionaler Leistungssensor",
+          "rated_power_w": "Nennleistung (W)",
+          "priority": "Priorität (1 = zuerst)",
+          "min_on_seconds": "Mindest-Einschaltdauer (Sekunden)",
+          "min_off_seconds": "Mindest-Ausschaltdauer (Sekunden)",
+          "surplus_margin_w": "Zusätzliche Überschussreserve (W)",
+          "enabled": "Für spätere Planung berücksichtigen (noch kein Schalten)"
+        }
+      },
+      "edit_consumer": {
+        "title": "Schaltverbraucher bearbeiten",
+        "data": {
+          "item_id": "Verbraucher"
+        }
+      },
+      "remove_consumer": {
+        "title": "Schaltverbraucher entfernen",
+        "data": {
+          "item_id": "Verbraucher"
+        }
+      },
+      "confirm_remove_consumer": {
+        "title": "Verbraucher entfernen?",
+        "description": "Zuordnung wirklich entfernen? Der physische Schalter bleibt unverändert."
+      },
+      "add_wallbox": {
+        "title": "Wallbox hinzufügen",
+        "description": "Wallbox-Entitäten auswählen. Eine Ladefreigabe oder Strombegrenzung wird noch nicht betätigt.",
+        "data": {
+          "name": "Wallbox-Bezeichnung",
+          "charge_power_sensor": "Ladeleistungssensor (optional)",
+          "charge_enable_switch": "Ladefreigabe-Schalter (optional)",
+          "current_limit_number": "Ladestrom-Limit (number, optional)",
+          "connected_binary_sensor": "Fahrzeug angeschlossen (binary_sensor, optional)",
+          "phase_count": "Phasen (Planungswert)",
+          "max_current_a": "Maximaler Ladestrom (A, Planungswert)",
+          "priority": "Priorität (1 = zuerst)",
+          "enabled": "Für spätere Planung berücksichtigen (noch kein Schalten)"
+        }
+      },
+      "wallbox_details": {
+        "title": "Wallbox bearbeiten",
+        "description": "Wallbox ändern. Das EMS liest aktuell nur Zustände aus.",
+        "data": {
+          "name": "Wallbox-Bezeichnung",
+          "charge_power_sensor": "Ladeleistungssensor (optional)",
+          "charge_enable_switch": "Ladefreigabe-Schalter (optional)",
+          "current_limit_number": "Ladestrom-Limit (number, optional)",
+          "connected_binary_sensor": "Fahrzeug angeschlossen (binary_sensor, optional)",
+          "phase_count": "Phasen (Planungswert)",
+          "max_current_a": "Maximaler Ladestrom (A, Planungswert)",
+          "priority": "Priorität (1 = zuerst)",
+          "enabled": "Für spätere Planung berücksichtigen (noch kein Schalten)"
+        }
+      },
+      "edit_wallbox": {
+        "title": "Wallbox bearbeiten",
+        "data": {
+          "item_id": "Wallbox"
+        }
+      },
+      "remove_wallbox": {
+        "title": "Wallbox entfernen",
+        "data": {
+          "item_id": "Wallbox"
+        }
+      },
+      "confirm_remove_wallbox": {
+        "title": "Wallbox entfernen?",
+        "description": "Wallbox-Zuordnung entfernen? Die Wallbox bleibt unverändert."
       }
     },
     "error": {
-      "warning_above_limit": "Vorwarnschwelle muss unter der Grenze liegen",
-      "source_missing": "Entität nicht gefunden",
-      "source_unit": "Quelle muss Wh oder kWh liefern",
-      "source_unavailable": "Quelle liefert keinen numerischen Wert"
+      "source_missing": "Quell-Entität nicht gefunden",
+      "source_unit": "Energiequelle muss Wh oder kWh liefern",
+      "source_unavailable": "Energiequelle ist nicht verfügbar oder nicht numerisch",
+      "warning_above_limit": "Vorwarnung muss unter der Leistungsgrenze liegen",
+      "name_required": "Eine Bezeichnung ist erforderlich",
+      "invalid_collection": "Ungültige Gerätekategorie",
+      "invalid_entity_domain": "Die Entität hat einen falschen Typ",
+      "switch_required": "Ein Schalter ist erforderlich",
+      "power_required": "Nennleistung muss 1–50000 W betragen",
+      "wallbox_entity_required": "Mindestens eine Wallbox-Entität auswählen",
+      "invalid_phase_count": "Bitte 1 oder 3 Phasen wählen",
+      "duplicate_entity": "Diese Entität ist bereits hinterlegt",
+      "duplicate_id": "Doppelte interne Geräte-ID",
+      "unknown_item": "Das Gerät wurde nicht gefunden"
+    },
+    "abort": {
+      "item_not_found": "Gerät nicht mehr vorhanden"
     }
   }
 }

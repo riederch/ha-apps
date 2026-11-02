@@ -63,7 +63,7 @@ Cloudflared Origin Auth ist ein schlanker Overlay-Fork von [`homeassistant-apps/
 
 Zusätzlich zu den oben beschriebenen Apps enthält dieses Repository die **Home-Assistant-Integration Local EMS** unter `custom_components/local_ems/`. Der App-Store installiert weiterhin nur die Apps, die Integration wird **separat über HACS** installiert.
 
-**Beta / Draft:** Der Rechenkern, das HA-Manifest und die technischen HACS-Prüfungen werden automatisiert validiert; optionale GitHub-Katalog-Metadaten sind noch nicht gesetzt, und der HA-Laufzeittest steht aus. **Erst nach Abschluss der Tests produktiv verwenden.** Auf dem Entwicklungsbranch `feature/local-ems-peak-monitor` befindet sich die erste lesende Beta für die Überwachung der 15-Minuten-Bezugsleistung.
+**Beta:** Der Rechenkern, das HA-Manifest und die technischen HACS-Prüfungen werden automatisiert validiert; optionale GitHub-Katalog-Metadaten sind noch nicht gesetzt. Ein tatsächlicher HA-Laufzeittest steht noch aus. **Vor produktiven Schaltfunktionen ist ein Funktionstest erforderlich.** Die bisherige Version 0.1 umfasst die lesende 15-Minuten-Spitzenüberwachung.
 
 ### Geplante Einrichtung
 
@@ -93,3 +93,25 @@ Neuinstallation bitte zuerst Logeinträge zu `local_ems` prüfen.
 **Eigener Quellcode** dieses Repositories, insbesondere `custom_components/local_ems/`, steht unter der **GNU GPL-3.0-or-later**. Der vollständige Lizenztext liegt in [`LICENSE`](LICENSE). Die Abgrenzung gegenüber Fremdcode erläutert [`LICENSE_SCOPE.md`](LICENSE_SCOPE.md).
 
 **Fremdkomponenten, übernommene MIT-lizenzierte App-Bestandteile und externe Runtime-Images** behalten ihre jeweiligen Lizenzbedingungen. Copyright-Hinweise und Herkunft sind unter [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) dokumentiert. Die GPL für unsere eigenen Teile ist keine Umlizenzierung fremder Werke.
+
+## Local EMS 0.2.0b1 – Geräteverwaltung
+
+Im bestehenden Local-EMS-Integrationseintrag unter **Konfigurieren** können
+mehrere **Schaltverbraucher** (Heizstäbe, Heizlüfter, sonstige Geräte) und
+**Wallboxen** hinterlegt, geändert und entfernt werden. Ebenfalls
+konfigurierbar sind die Datenquellen für Netzleistung, PV, Hausverbrauch,
+Batterieleistung und SoC.
+
+- Schaltverbraucher: `switch.*`, Nennleistung, optionaler Leistungssensor,
+  Priorität, Mindestlauf-/Ausschaltzeit und Überschussreserve.
+- Wallboxen: Ladeleistungssensor, optionale Ladefreigabe,
+  optionale Ladestromzahl, Fahrzeugstatus, Phasen, Maximalstrom, Priorität.
+- Übersicht: zusätzliche native Zähler- und Statussensoren im EMS-Gerät.
+- Speicherung: ausschließlich HA-Config-Entry-Optionen, keine YAML-Datei.
+
+**Wichtig:** Alle neuen Aktor-Entitäten werden in dieser Version nur
+hinterlegt und gelesen; **kein automatisches Schalten und keine
+Ladestromregelung**. Die spätere Überschussautomatik wird nach
+Validierung der Messwerte und Schaltgrenzen entwickelt.
+
+Details: [Geräteverwaltung](docs/local-ems-devices.md).

@@ -12,10 +12,18 @@ from .coordinator import LocalEMSCoordinator
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.NUMBER]
 
 
+async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Refresh the device register without touching existing entity IDs."""
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is not None:
+        coordinator.refresh_configuration()
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = LocalEMSCoordinator(hass, entry)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await coordinator.async_start()
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

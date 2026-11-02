@@ -106,13 +106,14 @@ ein erneutes HA-Update dennoch ein Mess-Heartbeat. Die Integration führt
 keine eigene dauerhafte Verbrauchshistorie, sondern hält nur aktuelle
 Stichproben bis zum Ende der laufenden Viertelstunde.
 
-## Integration im Test-Branch installieren
+## Installation über HACS
 
-Die neue Custom-Integration liegt zunächst nur auf `feature/local-ems-peak-monitor`; `main`
-und die produktive HA-Instanz bleiben unverändert. Bis zum Merge kann
-die Test-HA-Instanz die Integrationsdateien aus diesem Branch
-in `/config/custom_components/local_ems/` erhalten. Vor einem produktiven
-Einsatz sind die HACS-Prüfung und ein HA-Laufzeittest abzuschließen.
+Die Integration befindet sich im Repository `riederch/ha-apps` auf `main`
+und wird als benutzerdefinierte HACS-Integration installiert. Die neue
+Geräteverwaltung wird über den bestehenden Integrationseintrag unter
+**Konfigurieren** geöffnet. Keine YAML-Datei erforderlich. Vor einem
+produktiven Schaltbetrieb (erst in einer späteren Version) ist ein
+gesonderter HA-Laufzeit- und Gerätetest erforderlich.
 
 **HACS-Validierung:** Das gemeinsame `ha-apps`-Repository enthält
 gleichzeitig Home-Assistant-Apps und diese Custom-Integration. Der HACS-Check
