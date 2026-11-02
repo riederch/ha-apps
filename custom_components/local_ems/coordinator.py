@@ -28,6 +28,7 @@ from .const import (
     DOMAIN,
 )
 from .peak import Sample, calculate_peak, quarter_start_utc
+from .devices import catalog_snapshot
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -112,13 +113,15 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
         self._append(self._to_sample(live_state, live_state.last_reported if live_state else None))
 
     def _publish(self) -> None:
+        # Registry data remains visible even while the KNG meter is unavailable.
+        catalog = catalog_snapshot(self.entry.options, self.hass.states.get)
         now = dt_util.utcnow()
         quarter = quarter_start_utc(now, self.hass.config.time_zone)
         if self._quarter != quarter:
-            self.async_set_updated_data({"valid": False, "quality": "quarter_rollover"})
+            self.async_set_updated_data({**catalog, "valid": False, "quality": "quarter_rollover"})
             return
         if not self._source_ok:
-            self.async_set_updated_data({"valid": False, "quality": "source_unavailable"})
+            self.async_set_updated_data({**catalog, "valid": False, "quality": "source_unavailable"})
             return
         options = self.entry.options
         warning = float(options.get(CONF_WARNING_KW, DEFAULT_WARNING_KW))
@@ -133,6 +136,7 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
             stale_after=timedelta(seconds=stale),
         )
         snapshot = asdict(result)
+        snapshot.update(catalog)
         snapshot.update(
             {
                 "quarter_start": quarter.isoformat(),
