@@ -21,6 +21,7 @@ from .const import (
 ENERGY_UNITS = ("Wh", "kWh")
 POWER_UNITS = ("W", "kW")
 PERCENT_UNITS = ("%",)
+FREQUENCY_UNITS = ("Hz",)
 CURRENT_UNITS = ("A",)
 
 # HA's entity selector supports filter.unit_of_measurement since the
@@ -32,7 +33,11 @@ FIELD_UNITS: dict[str, tuple[str, ...]] = {
     WALLBOX_CHARGE_POWER: POWER_UNITS,
     WALLBOX_CURRENT_LIMIT: CURRENT_UNITS,
     **{
-        field: PERCENT_UNITS if field == "battery_soc_sensor" else POWER_UNITS
+        field: (
+            PERCENT_UNITS if field == "battery_soc_sensor"
+            else FREQUENCY_UNITS if field == "grid_frequency_sensor"
+            else POWER_UNITS
+        )
         for field in ENERGY_SOURCE_KEYS
     },
 }
