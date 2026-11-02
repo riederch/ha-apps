@@ -93,3 +93,25 @@ Neuinstallation bitte zuerst Logeinträge zu `local_ems` prüfen.
 **Eigener Quellcode** dieses Repositories, insbesondere `custom_components/local_ems/`, steht unter der **GNU GPL-3.0-or-later**. Der vollständige Lizenztext liegt in [`LICENSE`](LICENSE). Die Abgrenzung gegenüber Fremdcode erläutert [`LICENSE_SCOPE.md`](LICENSE_SCOPE.md).
 
 **Fremdkomponenten, übernommene MIT-lizenzierte App-Bestandteile und externe Runtime-Images** behalten ihre jeweiligen Lizenzbedingungen. Copyright-Hinweise und Herkunft sind unter [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) dokumentiert. Die GPL für unsere eigenen Teile ist keine Umlizenzierung fremder Werke.
+
+## Local EMS 0.2.0b1 – Geräteverwaltung
+
+Im bestehenden Local-EMS-Integrationseintrag unter **Konfigurieren** können
+mehrere **Schaltverbraucher** (Heizstäbe, Heizlüfter, sonstige Geräte) und
+**Wallboxen** hinterlegt, geändert und entfernt werden. Ebenfalls
+konfigurierbar sind die Datenquellen für Netzleistung, PV, Hausverbrauch,
+Batterieleistung und SoC.
+
+- Schaltverbraucher: `switch.*`, Nennleistung, optionaler Leistungssensor,
+  Priorität, Mindestlauf-/Ausschaltzeit und Überschussreserve.
+- Wallboxen: Ladeleistungssensor, optionale Ladefreigabe,
+  optionale Ladestromzahl, Fahrzeugstatus, Phasen, Maximalstrom, Priorität.
+- Übersicht: zusätzliche native Zähler- und Statussensoren im EMS-Gerät.
+- Speicherung: ausschließlich HA-Config-Entry-Optionen, keine YAML-Datei.
+
+**Wichtig:** Alle neuen Aktor-Entitäten werden in dieser Version nur
+hinterlegt und gelesen; **kein automatisches Schalten und keine
+Ladestromregelung**. Die spätere Überschussautomatik wird nach
+Validierung der Messwerte und Schaltgrenzen entwickelt.
+
+Details: [Geräteverwaltung](docs/local-ems-devices.md).

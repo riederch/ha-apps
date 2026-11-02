@@ -5,10 +5,23 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "local_ems"))
+from importlib import import_module
+from types import ModuleType
 
-from devices import save_item, remove_item, set_sources, catalog_snapshot  # noqa: E402
-from const import CONF_CONSUMERS, CONF_WALLBOXES, CONF_ENERGY_SOURCES  # noqa: E402
+pkg_path = Path(__file__).resolve().parents[1] / "custom_components" / "local_ems"
+pkg = ModuleType("local_ems")
+pkg.__path__ = [str(pkg_path)]
+sys.modules.setdefault("local_ems", pkg)
+
+devices = import_module("local_ems.devices")
+constants = import_module("local_ems.const")
+save_item = devices.save_item
+remove_item = devices.remove_item
+set_sources = devices.set_sources
+catalog_snapshot = devices.catalog_snapshot
+CONF_CONSUMERS = constants.CONF_CONSUMERS
+CONF_WALLBOXES = constants.CONF_WALLBOXES
+CONF_ENERGY_SOURCES = constants.CONF_ENERGY_SOURCES
 
 
 def consumer(entity, name="Heizstab", watts=3000):

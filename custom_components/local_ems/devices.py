@@ -106,7 +106,12 @@ def remove_item(options: dict[str, Any], kind: str, item_id: str) -> dict[str, A
 
 def set_sources(options: dict[str, Any], data: dict[str, str]) -> dict[str, Any]:
     result = dict(options)
-    result[CONF_ENERGY_SOURCES] = {k: v for k, v in data.items() if v}
+    from .const import ENERGY_SOURCE_KEYS
+
+    result[CONF_ENERGY_SOURCES] = {
+        k: v for k, v in data.items()
+        if k in ENERGY_SOURCE_KEYS and v and str(v).startswith("sensor.")
+    }
     return result
 
 
