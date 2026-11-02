@@ -43,7 +43,7 @@ Bestehende Installationen werden bei Versionswechseln nach Möglichkeit ohne man
 
 - Gitea: `1.27.2`
 - Gitea MCP: `1.8.0`
-- Gitea Runner: `5.0.0`
+- Gitea Runner: `5.0.0` (App `5.0.0-rch3`, bereinigte Job-Prozessumgebung)
 - Vaultwarden: `1.37.4`
 - Cloudflared: `2026.10.3`
 
