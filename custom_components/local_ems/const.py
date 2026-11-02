@@ -14,6 +14,7 @@ DEFAULT_STALE_SECONDS = 180
 
 SENSOR_DESCRIPTIONS = (
     ("energy_kwh", "Current quarter imported energy", "kWh"),
+    ("quarter_average_kw", "Quarter actual average demand", "kW"),
     ("committed_kw", "Quarter committed demand", "kW"),
     ("forecast_kw", "Quarter demand forecast", "kW"),
     ("remaining_budget_kwh", "Remaining import budget", "kWh"),

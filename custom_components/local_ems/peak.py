@@ -26,6 +26,7 @@ class PeakReading:
     valid: bool
     quality: str
     energy_kwh: float | None = None
+    quarter_average_kw: float | None = None
     committed_kw: float | None = None
     forecast_kw: float | None = None
     remaining_budget_kwh: float | None = None
@@ -104,6 +105,10 @@ def calculate_peak(
     energy = max(0.0, energy)
 
     elapsed_hours = (newest.timestamp - quarter_start).total_seconds() / 3600.0
+    # The actual average uses exactly the time interval observed by the meter,
+    # not wall-clock now (which can be several seconds later). At t=0 the
+    # quotient E/t is undefined, so expose unknown rather than an invented 0.
+    quarter_average_kw = energy / elapsed_hours if elapsed_hours > 0 else None
     in_quarter = [s for s in readings if quarter_start <= s.timestamp <= newest.timestamp]
     target = newest.timestamp - timedelta(seconds=60)
     candidate = next((s for s in reversed(in_quarter) if s.timestamp <= target), None)
@@ -139,6 +144,10 @@ def calculate_peak(
         valid=True,
         quality=boundary_quality if boundary_quality != "exact" else "ok",
         energy_kwh=round(energy, 5),
+        quarter_average_kw=(
+            round(quarter_average_kw, 4)
+            if quarter_average_kw is not None else None
+        ),
         committed_kw=round(committed_kw, 4),
         forecast_kw=round(forecast_kw, 4),
         remaining_budget_kwh=round(left_kwh, 5),
