@@ -3,6 +3,7 @@
 No Home Assistant state history is stored here. Samples come from HA Recorder
 at startup and from HA state events during operation.
 """
+# SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
 from dataclasses import dataclass

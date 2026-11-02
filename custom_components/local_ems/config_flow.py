@@ -56,6 +56,7 @@ def _validate(hass, user_input: dict) -> dict[str, str]:
 
 class LocalEMSConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Set up a single or multiple monitoring installations."""
+# SPDX-License-Identifier: GPL-3.0-or-later
 
     VERSION = 1
 

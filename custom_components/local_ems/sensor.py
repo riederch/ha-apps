@@ -29,6 +29,7 @@ async def async_setup_entry(
 
 class LocalEMSSensor(CoordinatorEntity[LocalEMSCoordinator], SensorEntity):
     """A computed, HA-recorded peak monitor value."""
+# SPDX-License-Identifier: GPL-3.0-or-later
 
     _attr_has_entity_name = True
     _attr_should_poll = False

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Unit tests for the calculation core, no HA installation required."""
 import sys
 import unittest

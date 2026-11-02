@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Local EMS: read-only demand monitoring and future energy modules."""
 from __future__ import annotations
 

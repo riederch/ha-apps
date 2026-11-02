@@ -34,6 +34,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
     """One short-lived sample buffer, rehydrated from Recorder each quarter."""
+# SPDX-License-Identifier: GPL-3.0-or-later
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         super().__init__(hass, _LOGGER, name="Local EMS")

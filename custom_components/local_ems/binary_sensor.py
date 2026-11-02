@@ -33,6 +33,7 @@ class LocalEMSBinarySensor(
     CoordinatorEntity[LocalEMSCoordinator], BinarySensorEntity
 ):
     """Boolean monitor states, with unavailable warnings on invalid data."""
+# SPDX-License-Identifier: GPL-3.0-or-later
 
     _attr_has_entity_name = True
     _attr_should_poll = False

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Constants for Local EMS."""
 DOMAIN = "local_ems"
 

@@ -29,6 +29,7 @@ async def async_setup_entry(
 
 class LocalEMSNumber(NumberEntity):
     """A configured limit; not a command to control electrical equipment."""
+# SPDX-License-Identifier: GPL-3.0-or-later
 
     _attr_has_entity_name = True
     _attr_should_poll = False
