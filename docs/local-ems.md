@@ -97,3 +97,11 @@ bleibt von der Integrationsverwendung getrennt.
   nur der Zähler für echten Netzbezug zählt.
 - Monats-Spitzenhistorie wird später als eigener, HA-Statistiken-kompatibler
   Messwert umgesetzt.
+
+## Stille Messwerte / Aktualisierungen ohne Zähleränderung
+
+Der Coordinator überwacht neben `state_changed` auch `state_reported` für den
+gewählten Verbrauchszähler. Wenn der Zähler bei 0 W unverändert bleibt, ist
+ein erneutes HA-Update dennoch ein Mess-Heartbeat. Die Integration führt
+keine eigene dauerhafte Verbrauchshistorie, sondern hält nur aktuelle
+Stichproben bis zum Ende der laufenden Viertelstunde.

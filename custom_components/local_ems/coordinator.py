@@ -8,9 +8,10 @@ import logging
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.history import get_significant_states
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, State
+from homeassistant.core import Event, EventStateChangedData, EventStateReportedData, HomeAssistant, State
 from homeassistant.helpers.event import (
     async_track_state_change_event,
+    async_track_state_report_event,
     async_track_time_interval,
 )
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -44,7 +45,7 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
         self._unsubs: list = []
         self.data = {"valid": False, "quality": "starting"}
 
-    def _to_sample(self, state: State | None) -> Sample | None:
+    def _to_sample(self, state: State | None, timestamp: datetime | None = None) -> Sample | None:
         if state is None or state.state in ("unknown", "unavailable", ""):
             return None
         source_state = self.hass.states.get(self.source)
@@ -61,7 +62,7 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
         if not (0 <= amount < float("inf")):
             return None
         return Sample(
-            timestamp=state.last_updated.astimezone(UTC),
+            timestamp=(timestamp or state.last_updated).astimezone(UTC),
             energy_kwh=amount / 1000 if unit == "Wh" else amount,
         )
 
@@ -107,7 +108,7 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
         # Include the freshest live state, which may not yet have been committed.
         live_state = self.hass.states.get(self.source)
         self._source_ok = self._to_sample(live_state) is not None
-        self._append(self._to_sample(live_state))
+        self._append(self._to_sample(live_state, live_state.last_reported if live_state else None))
 
     def _publish(self) -> None:
         now = dt_util.utcnow()
@@ -154,6 +155,11 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
             )
         )
         self._unsubs.append(
+            async_track_state_report_event(
+                self.hass, [self.source], self._on_source_reported
+            )
+        )
+        self._unsubs.append(
             async_track_time_interval(self.hass, self._on_timer, timedelta(seconds=10))
         )
         await self._reload_history()
@@ -167,6 +173,16 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
             self._append(sample)
         now = dt_util.utcnow()
         if quarter_start_utc(now, self.hass.config.time_zone) != self._quarter:
+            await self._reload_history()
+        self._publish()
+
+    async def _on_source_reported(self, event: Event[EventStateReportedData]) -> None:
+        """A heartbeat with unchanged energy still counts as a fresh observation."""
+        sample = self._to_sample(event.data["new_state"], event.data["last_reported"])
+        self._source_ok = sample is not None
+        if sample is not None:
+            self._append(sample)
+        if quarter_start_utc(dt_util.utcnow(), self.hass.config.time_zone) != self._quarter:
             await self._reload_history()
         self._publish()
 

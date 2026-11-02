@@ -58,3 +58,21 @@ Gitea Runner verwendet den offiziellen Runner `5.0.0` aus `docker.io/gitea/runne
 Die Vaultwarden-App basiert auf [`hassio-addons/app-vaultwarden`](https://github.com/hassio-addons/app-vaultwarden) und verwendet Vaultwarden `1.37.4`.
 
 Cloudflared Origin Auth ist ein schlanker Overlay-Fork von [`homeassistant-apps/app-cloudflared`](https://github.com/homeassistant-apps/app-cloudflared), aktuell auf App-Basis `7.0.19` mit Cloudflared `2026.10.3`. Details zu den übernommenen Komponenten stehen in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+## Local EMS (HACS-Integration, Beta)
+
+Zusätzlich zu den oben beschriebenen Apps enthält dieses Repository die **Home-Assistant-Integration Local EMS** unter `custom_components/local_ems/`. Der App-Store installiert weiterhin nur die Apps, die Integration wird **separat über HACS** installiert.
+
+**Erst nach Abschluss der Tests produktiv verwenden.** Auf dem Entwicklungsbranch `feature/local-ems-peak-monitor` befindet sich die erste lesende Beta für die Überwachung der 15-Minuten-Bezugsleistung.
+
+### Geplante Einrichtung
+
+1. HACS → benutzerdefinierte Repositories → `https://github.com/riederch/ha-apps` als Typ **Integration** hinzufügen.
+2. Die Integration **Local EMS** installieren und Home Assistant neu starten.
+3. Einstellungen → Geräte & Dienste → Integration hinzufügen → **Local EMS**.
+4. Als Bezugssensor `sensor.kng_p_in` auswählen; 10 kW Grenzwert und 9 kW Warnschwelle sind die Startwerte.
+5. Die erzeugten Sensoren und Warnentitäten in Dashboard/Automationen nutzen. Keine YAML-Konfiguration erforderlich.
+
+Dokumentierte Architektur und Einschränkungen: [`docs/local-ems.md`](docs/local-ems.md).
+
+**Wichtig:** Diese erste Fassung ist kein zugelassener Netzleistungsbegrenzer, sondern eine rein lesende Prognose. Bei unvollständigen Quelldaten werden Berechnungen ausdrücklich als ungültig markiert.
