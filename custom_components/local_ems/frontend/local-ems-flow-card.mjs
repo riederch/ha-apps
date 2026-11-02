@@ -73,11 +73,11 @@ const PATHS = {
 // Percent-based paths keep the same power-flow topology on phones, tablets,
 // and widescreen dashboards. SVG vector-effect keeps lines a consistent width.
 const CSS = [
-  ":host{display:block;--ems-solar:var(--warning-color,#eba526);",
+  ":host{display:block;width:100%;min-width:0;box-sizing:border-box;--ems-solar:var(--warning-color,#eba526);",
   "--ems-grid:var(--info-color,#3395cc);",
   "--ems-home:var(--success-color,#36aca0);",
   "--ems-battery:#bb6baf;}",
-  "ha-card{padding:18px 12px 15px;overflow:hidden;}",
+  "ha-card{padding:18px 12px 15px;overflow:hidden;width:100%;box-sizing:border-box;}",
   ".header{display:flex;align-items:center;justify-content:space-between;gap:12px;",
   "padding:0 8px 12px;}",
   ".title{color:var(--primary-text-color);font-size:1.14rem;font-weight:600;}",
@@ -89,7 +89,7 @@ const CSS = [
   ".status[data-state='on_grid']{color:var(--success-color,#39a178);}",
   ".status[data-state='eps'],.status[data-state='grid_lost']{color:var(--error-color,#e25959);}",
   ".status[data-state='suspect'],.status[data-state='recovering']{color:var(--warning-color,#c99d30);}",
-  ".canvas{height:356px;position:relative;isolation:isolate;}",
+  ".canvas{height:324px;min-width:0;position:relative;isolation:isolate;}",
   ".lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;",
   "overflow:visible;z-index:0;}",
   ".track,.dots{fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round;}",
@@ -102,7 +102,7 @@ const CSS = [
   "#battery-dots{stroke:var(--ems-battery);}",
   "@keyframes power-dots{from{stroke-dashoffset:0;}to{stroke-dashoffset:-84;}}",
   ".node{position:absolute;transform:translate(-50%,-50%);",
-  "width:clamp(78px,23%,116px);aspect-ratio:1;box-sizing:border-box;",
+  "width:clamp(72px,23%,116px);aspect-ratio:1;box-sizing:border-box;",
   "border:none;background:transparent;padding:0;cursor:pointer;color:var(--primary-text-color);",
   "display:flex;align-items:center;justify-content:center;font:inherit;z-index:1;}",
   ".node:focus-visible{outline:2px solid var(--primary-color);outline-offset:6px;",
@@ -120,10 +120,10 @@ const CSS = [
   "top:calc(100% + 6px);font-size:.8rem;color:var(--secondary-text-color);",
   "white-space:nowrap;font-weight:500;pointer-events:none;}",
   ".solar .name{top:auto;bottom:calc(100% + 5px);}",
-  ".solar{--ring:var(--ems-solar);left:50%;top:17%;}",
-  ".grid{--ring:var(--ems-grid);left:14%;top:50%;}",
-  ".home{--ring:var(--ems-home);left:86%;top:50%;}",
-  ".battery{--ring:var(--ems-battery);left:50%;top:83%;}",
+  ".solar{--ring:var(--ems-solar);left:50%;top:24%;}",
+  ".grid{--ring:var(--ems-grid);left:16%;top:50%;}",
+  ".home{--ring:var(--ems-home);left:84%;top:50%;}",
+  ".battery{--ring:var(--ems-battery);left:50%;top:74%;}",
   ".node[data-active='false'] .disc{border-color:var(--divider-color,#a1a1a1);}",
   ".node[data-active='false'] .disc ha-icon{color:var(--secondary-text-color);}",
   ".node[data-outage='true']{--ring:var(--error-color,#e05c5c);}",
@@ -136,7 +136,7 @@ const CSS = [
   ".note{color:var(--secondary-text-color);font-size:.76rem;text-align:center;",
   "margin:7px 8px 0;line-height:1.4;}",
   ".note:empty{display:none;}",
-  "@media(max-width:400px){ha-card{padding:14px 8px;}.canvas{height:318px;}",
+  "@media(max-width:400px){ha-card{padding:14px 8px;}.canvas{height:310px;}",
   ".node{width:clamp(72px,24%,96px);}",
   ".disc .power{font-size:.85rem;}.disc .detail{font-size:.59rem;}",
   ".disc ha-icon{--mdc-icon-size:21px;}.header{gap:7px;}",
@@ -260,7 +260,9 @@ export class LocalEMSFlowCard extends HTMLElement {
   getCardSize() { return 8; }
 
   getGridOptions() {
-    return { columns: 6, min_columns: 3, max_columns: 12, rows: 5, min_rows: 4 };
+    // Sections dashboards use a 12-column grid. Default to the full width;
+    // existing explicit grid_options from a saved card still take precedence.
+    return { columns: 12, min_columns: 6, max_columns: 12, rows: "auto" };
   }
 
   static getStubConfig() { return {}; }
@@ -282,6 +284,22 @@ export class LocalEMSFlowCard extends HTMLElement {
   _text(selector, value) {
     const element = this._root.querySelector(selector);
     if (element) element.textContent = value ?? "";
+  }
+
+  _inverterLabel(model) {
+    // The backend stores vendor-neutral raw states. For display, prefer
+    // Home Assistant's localized label for an ENUM sensor when available.
+    const entity = this._hass?.states?.[model.sources?.inverter_state];
+    const localize = this._hass?.formatEntityState;
+    if (entity && typeof localize === "function") {
+      try {
+        const value = localize.call(this._hass, entity);
+        if (typeof value === "string" && value.trim()) return value;
+      } catch (_err) {
+        // Unknown or custom enum: use a readable raw state as fallback.
+      }
+    }
+    return model.inverterState ? model.inverterState.replaceAll("_", " ") : "";
   }
 
   _flow(name, active, path, watts) {
@@ -351,6 +369,7 @@ export class LocalEMSFlowCard extends HTMLElement {
       "icon", outage ? "mdi:transmission-tower-off" : "mdi:transmission-tower"
     );
 
+    const inverterLabel = this._inverterLabel(model);
     const data = {
       solar: { watts: model.solarW, detail: model.directions.solar },
       grid: { watts: model.gridW, detail: model.directions.grid },
@@ -378,8 +397,8 @@ export class LocalEMSFlowCard extends HTMLElement {
           minimumFractionDigits: 1, maximumFractionDigits: 2,
         }).format(model.frequency) + " Hz";
       }
-      if (name === "home" && model.inverterState) {
-        detail = model.inverterState;
+      if (name === "home" && inverterLabel) {
+        detail = inverterLabel;
       }
       this._text('[data-detail="' + name + '"]', detail);
       const detailEl = this._root.querySelector('[data-detail="' + name + '"]');
@@ -407,8 +426,8 @@ export class LocalEMSFlowCard extends HTMLElement {
         PATHS.batteryReverse : PATHS.battery,
       model.batteryW
     );
-    this._text("#inverter", model.inverterState ?
-      t.inverter + ": " + model.inverterState : "");
+    this._text("#inverter", inverterLabel ?
+      t.inverter + ": " + inverterLabel : "");
   }
 }
 

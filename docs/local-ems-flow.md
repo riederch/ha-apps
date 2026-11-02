@@ -154,3 +154,34 @@ sind ausdrücklich **nicht** das gewählte Layout.
 Bis die Darstellung und alle Richtungen in der eigenen HA-Instanz
 verifiziert wurden, die bisherige Karte bitte als Referenz behalten.
 Die EMS-Integration steuert in diesem Release weiterhin keine Verbraucher.
+
+
+## Abschnittsbreite in HA Sections (ab 0.4.0b3)
+
+Die Local-EMS-Karte meldet über `getGridOptions()` standardmäßig
+**12 von 12 Spalten** (volle Abschnittsbreite) und verwendet die automatische
+Zeilenhöhe. Damit ist sie standardmäßig genauso breit wie eine ganzzeilige
+Power Flow Card Plus. Die Kreisgrößen und Positionen wurden auf diese
+Breite abgestimmt; der Wechselrichterzustand wird, sofern HA dies anbietet,
+als **lokalisierter** Wert statt als englischer Rohzustand angezeigt.
+
+**Achtung bei bereits gespeicherten Karten:** In der Sections-Ansicht
+gespeicherte `grid_options` haben Vorrang vor neuen Kartenvorgaben.
+Bestehende Karten mit `columns: 6` müssen deshalb einmalig auf Breite 12
+umgestellt werden (Karte bearbeiten → Layout) oder explizit:
+
+```yaml
+type: custom:local-ems-flow-card
+grid_options:
+  columns: 12
+  rows: auto
+```
+
+Die Breite 12 meint die volle **Abschnittsbreite**, nicht zwingend die gesamte
+Dashboard-Fensterbreite. Wird eine Section selbst nur halb so breit
+angezeigt, muss die Dashboard-Anordnung entsprechend geändert werden.
+
+Falls die bisherige PFCP-Karte Netzfrequenz zeigt, unsere Local-EMS-Karte
+aber nicht, in **Local EMS → Konfigurieren → Energie-Messwerte**
+`sensor.hyd20ktl_3p_netzfrequenz` dem Feld **Netzfrequenz** zuordnen.
+Dieser Zusatzwert gehört nicht zu den üblichen Energy-Dashboard-Prefs.
