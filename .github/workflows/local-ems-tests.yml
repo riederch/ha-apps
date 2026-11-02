@@ -5,11 +5,13 @@ on:
     paths:
       - "custom_components/local_ems/**"
       - "tests/test_local_ems_*.py"
+      - "tests/test-local-ems-*.mjs"
       - ".github/workflows/local-ems-tests.yml"
   push:
     paths:
       - "custom_components/local_ems/**"
       - "tests/test_local_ems_*.py"
+      - "tests/test-local-ems-*.mjs"
 
 jobs:
   core-tests:
@@ -23,3 +25,17 @@ jobs:
         run: python -m compileall -q custom_components/local_ems
       - name: Run pure calculation tests
         run: python -m unittest discover -s tests -p 'test_local_ems_*.py' -v
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify custom card JavaScript
+        run: |
+          node --check custom_components/local_ems/frontend/local-ems-flow-card.mjs
+          node --check custom_components/local_ems/frontend/flow-model.mjs
+      - name: Run energy-flow unit tests
+        run: node --test tests/test-local-ems-flow.mjs

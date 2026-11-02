@@ -39,6 +39,12 @@ class LocalEMSUnitFilterTests(unittest.TestCase):
                     {"domain": "sensor", "unit_of_measurement": ["W", "kW"]},
                 )
 
+    def test_grid_frequency_only_hz(self):
+        self.assertEqual(
+            filters.entity_selector_filter("grid_frequency_sensor", "sensor"),
+            {"domain": "sensor", "unit_of_measurement": ["Hz"]},
+        )
+
     def test_battery_soc_only_percent(self):
         self.assertEqual(
             filters.entity_selector_filter("battery_soc_sensor", "sensor"),

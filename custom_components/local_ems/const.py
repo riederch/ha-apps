@@ -51,7 +51,11 @@ ENERGY_SOURCE_KEYS = (
     "house_power_sensor",
     "battery_power_sensor",
     "battery_soc_sensor",
+    "grid_frequency_sensor",
 )
+
+GRID_POWER_INVERT = "grid_power_invert"
+BATTERY_POWER_INVERT = "battery_power_invert"
 
 CATALOG_SENSORS = (
     ("consumers_count", "Registered flexible consumers", None),

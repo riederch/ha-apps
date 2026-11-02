@@ -122,10 +122,17 @@ def set_sources(options: dict[str, Any], data: dict[str, str]) -> dict[str, Any]
     result = dict(options)
     from .const import ENERGY_SOURCE_KEYS
 
-    result[CONF_ENERGY_SOURCES] = {
+    from .const import BATTERY_POWER_INVERT, GRID_POWER_INVERT
+
+    new_sources = {
         k: v for k, v in data.items()
         if k in ENERGY_SOURCE_KEYS and v and str(v).startswith("sensor.")
     }
+    # Do not overwrite legacy settings if a caller only supplies entity IDs.
+    for key in (GRID_POWER_INVERT, BATTERY_POWER_INVERT):
+        if key in data:
+            new_sources[key] = bool(data[key])
+    result[CONF_ENERGY_SOURCES] = new_sources
     return result
 
 

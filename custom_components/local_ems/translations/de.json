@@ -60,13 +60,16 @@
       },
       "energy_sources": {
         "title": "Energie-Messwerte zuordnen",
-        "description": "Optional: Quellen für Netz, PV, Haus und Batterie. Netzleistung muss positiv bei Bezug und negativ bei Einspeisung sein. Es werden noch keine Geräte geschaltet.",
+        "description": "Netz, PV, Haus, Batterie und Netzfrequenz zuordnen. Die Vorzeichen von Netz/Batterie bei Bedarf umkehren. Die Messwerte werden direkt aus Home Assistant gelesen.",
         "data": {
           "grid_power_sensor": "Netzleistung (+Bezug/-Einspeisung)",
           "pv_power_sensor": "PV-Leistung",
           "house_power_sensor": "Hausverbrauch",
           "battery_power_sensor": "Batterieleistung (+Entladen/-Laden)",
-          "battery_soc_sensor": "Batterie-Ladestand (SoC)"
+          "battery_soc_sensor": "Batterie-Ladestand (SoC)",
+          "grid_frequency_sensor": "Netzfrequenz (Hz)",
+          "grid_power_invert": "Netzleistung-Vorzeichen umkehren (Bezug positiv)",
+          "battery_power_invert": "Batterieleistung-Vorzeichen umkehren (Entladen positiv)"
         }
       },
       "add_consumer": {

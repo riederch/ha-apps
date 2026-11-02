@@ -129,6 +129,22 @@ class LocalEMSCatalogTests(unittest.TestCase):
         })
         self.assertEqual(updated[CONF_CONSUMERS], options[CONF_CONSUMERS])
 
+    def test_energy_sources_store_sign_inversions_and_frequency(self):
+        updated = set_sources({}, {
+            "grid_power_sensor": "sensor.kng_p",
+            "pv_power_sensor": "sensor.pv",
+            "grid_frequency_sensor": "sensor.grid_hz",
+            "battery_power_invert": True,
+            "grid_power_invert": False,
+        })
+        result = updated[CONF_ENERGY_SOURCES]
+        self.assertEqual(result["grid_frequency_sensor"], "sensor.grid_hz")
+        self.assertTrue(result["battery_power_invert"])
+        self.assertFalse(result["grid_power_invert"])
+        # The flag is optional for older callers, keeping API backward-compatible.
+        old = set_sources({}, {"grid_power_sensor": "sensor.kng_p"})
+        self.assertNotIn("battery_power_invert", old[CONF_ENERGY_SOURCES])
+
     def test_live_state_summary_falls_back_to_rated_power(self):
         options = save_item({}, CONF_CONSUMERS,
                             consumer("switch.a", watts=3000),

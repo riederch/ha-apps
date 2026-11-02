@@ -32,6 +32,8 @@ from .const import (
     DEFAULT_WARNING_KW,
     DOMAIN,
     ENERGY_SOURCE_KEYS,
+    GRID_POWER_INVERT,
+    BATTERY_POWER_INVERT,
     CONF_GRID_SAFETY,
     CONF_EMS_ENABLED,
     GRID_STATE_ENTITY,
@@ -227,11 +229,17 @@ def _wallbox_form(item: dict) -> vol.Schema:
 
 
 def _sources_form(current: dict) -> vol.Schema:
-    fields = [
+    fields = dict(
         _optional_entity(key, "sensor", current)
         for key in ENERGY_SOURCE_KEYS
-    ]
-    return vol.Schema(dict(fields))
+    )
+    fields.update({
+        vol.Required(GRID_POWER_INVERT, default=current.get(GRID_POWER_INVERT, False)):
+            selector.BooleanSelector(),
+        vol.Required(BATTERY_POWER_INVERT, default=current.get(BATTERY_POWER_INVERT, False)):
+            selector.BooleanSelector(),
+    })
+    return vol.Schema(fields)
 
 
 def _choose_item(items: list[dict]) -> vol.Schema:

@@ -60,13 +60,16 @@
       },
       "energy_sources": {
         "title": "Energy source mapping",
-        "description": "Optional grid, PV, house and battery sources. Grid power must be positive for import and negative for export. No devices are controlled.",
+        "description": "Select grid, PV, house, battery and grid frequency sensors. Correct grid/battery polarity with the switches below. Source values are read live from Home Assistant.",
         "data": {
           "grid_power_sensor": "Signed grid power (+import/-export)",
           "pv_power_sensor": "PV production power",
           "house_power_sensor": "House power",
           "battery_power_sensor": "Battery power (+discharge/-charge)",
-          "battery_soc_sensor": "Battery state of charge"
+          "battery_soc_sensor": "Battery state of charge",
+          "grid_frequency_sensor": "Grid frequency sensor (Hz)",
+          "grid_power_invert": "Invert grid power sign (normally import = positive)",
+          "battery_power_invert": "Invert battery power sign (discharge = positive)"
         }
       },
       "add_consumer": {

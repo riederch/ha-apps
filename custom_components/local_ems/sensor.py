@@ -13,7 +13,19 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CATALOG_SENSORS, DOMAIN, SENSOR_DESCRIPTIONS
+from .const import (
+    BATTERY_POWER_INVERT,
+    CATALOG_SENSORS,
+    CONF_ENERGY_SOURCES,
+    CONF_GRID_SAFETY,
+    DOMAIN,
+    ENERGY_SOURCE_KEYS,
+    GRID_CONTACT_ENTITY,
+    GRID_CONTACT_ON_IS_PRESENT,
+    GRID_POWER_INVERT,
+    GRID_STATE_ENTITY,
+    SENSOR_DESCRIPTIONS,
+)
 from .coordinator import LocalEMSCoordinator
 
 
@@ -23,6 +35,7 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
         [
+            LocalEMSEnergyFlowSource(coordinator, entry),
             *(LocalEMSGridSafetySensor(coordinator, entry, key, name, unit)
               for key, name, unit in (
                   ("grid_state", "Grid safety state", None),
@@ -176,4 +189,63 @@ class LocalEMSGridSafetySensor(CoordinatorEntity[LocalEMSCoordinator], SensorEnt
             "grid_contact_source": options.get("grid_contact_entity"),
             "heartbeat_source": options.get("meter_heartbeat_entity"),
             "operating_mode_source": options.get("operating_mode_entity"),
+        }
+
+
+class LocalEMSEnergyFlowSource(CoordinatorEntity[LocalEMSCoordinator], SensorEntity):
+    """One metadata-only source for Local EMS frontend cards.
+
+    No power readings are copied into the recorder. The bundled JS card reads
+    live source entities from hass.states and uses this sensor for mapping,
+    polarity and the safety state. Existing Home Assistant integrations remain
+    the authoritative source of all energy/consumption history.
+    """
+
+    _attr_has_entity_name = True
+    _attr_name = "Energy flow"
+    _attr_should_poll = False
+
+    def __init__(self, coordinator: LocalEMSCoordinator, entry: ConfigEntry):
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_energy_flow"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name="Local EMS",
+            manufacturer="Local EMS",
+            model="Modular EMS",
+        )
+
+    @property
+    def native_value(self) -> str:
+        sources = self.coordinator.entry.options.get(CONF_ENERGY_SOURCES, {})
+        return "configured" if any(sources.get(k) for k in ENERGY_SOURCE_KEYS) \
+            else "not_configured"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        sources = self.coordinator.entry.options.get(CONF_ENERGY_SOURCES, {})
+        safety = self.coordinator.entry.options.get(CONF_GRID_SAFETY, {})
+        return {
+            "ems_flow_version": 1,
+            "source_entities": {
+                "grid": sources.get("grid_power_sensor"),
+                "solar": sources.get("pv_power_sensor"),
+                "home": sources.get("house_power_sensor"),
+                "battery": sources.get("battery_power_sensor"),
+                "battery_soc": sources.get("battery_soc_sensor"),
+                "grid_frequency": sources.get("grid_frequency_sensor"),
+                "grid_contact": safety.get(GRID_CONTACT_ENTITY),
+                "inverter_state": safety.get(GRID_STATE_ENTITY),
+            },
+            "invert_grid_power": bool(sources.get(GRID_POWER_INVERT, False)),
+            "invert_battery_power": bool(sources.get(BATTERY_POWER_INVERT, False)),
+            "grid_contact_on_is_present": bool(
+                safety.get(GRID_CONTACT_ON_IS_PRESENT, True)
+            ),
+            "grid_state": self.coordinator.data.get("grid_state", "unconfigured"),
+            "grid_safety_reason": self.coordinator.data.get("safety_reason"),
+            "control_allowed": bool(
+                self.coordinator.data.get("control_allowed", False)
+            ),
+            "read_only": True,
         }
