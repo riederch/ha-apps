@@ -1,4 +1,4 @@
-# Local EMS – eigenständige Energieflusskarte (0.4.0b1)
+# Local EMS – eigene Power-Flow-Karte (0.4.0b2)
 
 ## Idee und Grenzen
 
@@ -6,14 +6,23 @@
 `custom:local-ems-flow-card`. Die bisher separate Community-Karte
 `power-flow-card-plus` ist dafür **nicht erforderlich**.
 
-Die Zuordnung der Quellen erfolgt **einmalig** in der EMS-Integration, die
-Karte ermittelt über eine zusätzliche Metadaten-Entität automatisch ihre
-Quellen. Der Browser liest anschließend die aktuellen HA-Zustände direkt.
+**Standard: Energy-Dashboard als Datenquelle.** Die Karte liest die
+Einstellungen über Home Assistants lesende WebSocket-API
+`energy/get_prefs` und verwendet deren `stat_rate` bzw.
+`power_config` für Netz, PV, Haus und Batterie, einschließlich
+getrenntem Netzbezug/Einspeisung, Laden/Entladen, mehreren Quellen und
+Batterie-SoC. Die im EMS hinterlegten Leistungsquellen dienen als
+**Fallback**, falls im Energy-Dashboard kein Echtzeit-Leistungssensor
+konfiguriert ist. Die Karte liest aktuelle HA-Zustände direkt.
 Dadurch werden **keine zweiten Leistungszeitreihen im HA Recorder** erzeugt.
 
-Die erste Fassung stellt vier Knoten (PV, Netz, Batterie, Haus) mit
-animierten Stromfluss-Linien dar, dazu Batterieladestand, Netzfrequenz,
-WR-Rohzustand und den herstellerunabhängigen Netzstatus.
+Die Karte nutzt bewusst die **runde Energiefluss-Topologie** in Anlehnung an
+die Home-Assistant-Energieverteilung und Power Flow Card Plus:
+PV **oben**, Netz **links**, Haus **rechts**, Batterie **unten**.
+Gebogene Verbindungslinien, animierte farbige Punkte, Live-Leistungswerte,
+Batterieladestand, Netzfrequenz, WR-Rohzustand und EPS-Status gehören dazu.
+Die Darstellung ist eine **eigene Implementierung**, ohne fremde JavaScript-
+Bibliothek oder Abhängigkeit von Power Flow Card Plus.
 
 Die zusätzliche Metadaten-Entität **Local EMS Energy flow** enthält
 Konfiguration und Sicherheitsstatus, **nicht** kontinuierliche Kopien der
@@ -49,13 +58,28 @@ werden. Die Karte enthält **keinen Herstelleradapter**.
 
 ## Dashboard-Karte verwenden
 
-Nach HACS-Update auf 0.4.0b1 und Neustart von Home Assistant:
+Nach HACS-Update auf 0.4.0b2 und Neustart von Home Assistant:
 
 ```yaml
 type: custom:local-ems-flow-card
 ```
 
 Das ist die gesamte Dashboard-Konfiguration für einen EMS-Eintrag.
+Die Karte zeigt **momentane Leistungen in W/kW**. Die Energiezähler in
+Wh/kWh übernimmt unser EMS weiterhin für Peak- und Verbrauchsanalysen; die
+Karte darf aus einem kumulativen kWh-Zähler **keine scheinbar sekundengenaue
+Leistung** ableiten.
+
+Falls die Leistungs-Sensoren des Energy-Dashboards nicht verwendet werden
+sollen (z. B. wegen Spezialmessungen), ist ein Dashboard-Override möglich:
+
+```yaml
+type: custom:local-ems-flow-card
+source_mode: ems
+```
+
+Damit verwendet die Karte wieder die zentral im EMS hinterlegten Sensoren,
+ohne diese im Dashboard erneut angeben zu müssen.
 
 Bei mehreren Local-EMS-Instanzen kann die passende Metadaten-Entität explizit
 gewählt werden:
@@ -83,7 +107,7 @@ sein eigenes Modul **automatisch** als Lovelace-Ressource zu registrieren
 Wenn die Registrierung nicht möglich ist, unter **Einstellungen →
 Dashboards → Ressourcen → Ressource hinzufügen** einmalig anlegen:
 
-- URL: `/local_ems/local-ems-flow-card.mjs?v=0.4.0b1`
+- URL: `/local_ems/local-ems-flow-card.mjs?v=0.4.0b2`
 - Typ: **JavaScript-Modul**
 
 Bei YAML-Ressourcenverwaltung stattdessen entsprechend im Lovelace-Abschnitt
@@ -93,7 +117,7 @@ eintragen:
 lovelace:
   resource_mode: yaml
   resources:
-    - url: /local_ems/local-ems-flow-card.mjs?v=0.4.0b1
+    - url: /local_ems/local-ems-flow-card.mjs?v=0.4.0b2
       type: module
 ```
 
@@ -120,11 +144,12 @@ keine elektroenergetische Lastflussberechnung.
 
 ## Warum nicht einfach power-flow-card-plus?
 
-Die Fremdkarte liefert zahlreiche zusätzliche Darstellungsoptionen und ist
-bereits ausgereift. Die Local-EMS-Karte hat bewusst einen kleineren
-Funktionsumfang, kann aber ohne externe Dashboard-Integration arbeiten und
-verwendet direkt die einmalige EMS-Konfiguration. Sie ist **keine
-pixelgenaue Kopie** der bisherigen Karte.
+Die eigene Local-EMS-Karte hat jetzt den **vertrauten Kreis-/Punktfluss-Stil**,
+bleibt aber schlanker als Power Flow Card Plus: noch kein vollständiger
+grafischer Editor und noch keine zusätzlichen individuellen
+Wallbox-/Heizstab-Knoten. Sie verwendet native HA-Themenfarben und ist
+**keine pixelgenaue Kopie** der Fremdkarte. Native Power-Sankey-Diagramme
+sind ausdrücklich **nicht** das gewählte Layout.
 
 Bis die Darstellung und alle Richtungen in der eigenen HA-Instanz
 verifiziert wurden, die bisherige Karte bitte als Referenz behalten.

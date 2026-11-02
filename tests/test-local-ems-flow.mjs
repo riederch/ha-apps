@@ -140,3 +140,140 @@ test("display formatting works at zero and in kW", () => {
   assert.match(formatWatts(2340, "de-AT"), /2,3 kW/);
   assert.match(formatWatts(-560, "de-AT"), /560 W/);
 });
+
+
+test("Energy dashboard power data is preferred over EMS manual mapping", () => {
+  const energy = { energy_sources: [
+    { type: "grid", stat_rate: "sensor.energy_grid" },
+    { type: "solar", stat_rate: "sensor.energy_solar" },
+    { type: "home", stat_rate: "sensor.energy_home" },
+    { type: "battery", stat_rate: "sensor.energy_battery", stat_soc: "sensor.energy_soc" },
+  ] };
+  const states = {
+    ...sample(),
+    "sensor.energy_grid": mk(0.5, "kW"),
+    "sensor.energy_solar": mk(5, "kW"),
+    "sensor.energy_home": mk(2000, "W"),
+    "sensor.energy_battery": mk(-700, "W"),
+    "sensor.energy_soc": mk(81, "%"),
+  };
+  const model = buildFlowModel(states, attributes, energy);
+  assert.equal(model.sourceMode, "energy");
+  assert.equal(model.gridW, 500);
+  assert.equal(model.solarW, 5000);
+  assert.equal(model.homeW, undefined);
+  assert.equal(model.houseW, 2000);
+  assert.equal(model.batteryW, -700);
+  assert.equal(model.batterySoc, 81);
+  assert.equal(model.sources.grid, "sensor.energy_grid");
+  assert.equal(model.directions.battery, "charge");
+});
+
+test("manual source_mode overrides configured Energy dashboard power", () => {
+  const energy = { energy_sources: [
+    { type: "grid", stat_rate: "sensor.energy_grid" }
+  ] };
+  const states = { ...sample(), "sensor.energy_grid": mk(3000, "W") };
+  const model = buildFlowModel(states, attributes, energy, { source_mode: "ems" });
+  assert.equal(model.gridW, -307);
+  assert.equal(model.sourceMode, "ems");
+  assert.equal(model.sources.grid, "sensor.kng_p");
+});
+
+test("split import/export sensor configuration yields signed grid power", () => {
+  const energy = { energy_sources: [
+    { type: "grid", stat_rate: "sensor.grid_helper",
+      power_config: {
+        stat_rate_from: "sensor.import",
+        stat_rate_to: "sensor.export",
+      },
+    },
+  ] };
+  const states = {
+    ...sample(),
+    "sensor.import": mk(1.1, "kW"),
+    "sensor.export": mk(300, "W"),
+  };
+  const model = buildFlowModel(states, attributes, energy);
+  assert.equal(model.gridW, 800);
+  assert.equal(model.directions.grid, "import");
+  states["sensor.grid_helper"] = mk(-1500, "W");
+  assert.equal(buildFlowModel(states, attributes, energy).gridW, -1500);
+});
+
+test("inverted energy dashboard power_config works without generated helper", () => {
+  const energy = { energy_sources: [
+    { type: "battery", stat_rate: "sensor.battery_helper",
+      power_config: { stat_rate_inverted: "sensor.battery_raw" },
+      stat_soc: "sensor.energy_soc",
+    },
+  ] };
+  const states = {
+    ...sample(),
+    "sensor.battery_raw": mk(2, "kW"),
+    "sensor.energy_soc": mk(55, "%"),
+  };
+  const model = buildFlowModel(states, attributes, energy);
+  assert.equal(model.batteryW, -2000);
+  assert.equal(model.batterySoc, 55);
+});
+
+test("multiple photovoltaic sources aggregate; any missing source stays unknown", () => {
+  const energy = { energy_sources: [
+    { type: "solar", stat_rate: "sensor.solar_1" },
+    { type: "solar", stat_rate: "sensor.solar_2" },
+  ] };
+  const states = {
+    ...sample(),
+    "sensor.solar_1": mk(1000, "W"),
+    "sensor.solar_2": mk(1.5, "kW"),
+  };
+  assert.equal(buildFlowModel(states, attributes, energy).solarW, 2500);
+  delete states["sensor.solar_2"];
+  assert.equal(buildFlowModel(states, attributes, energy).solarW, null);
+});
+
+test("weighted battery SOC for multiple storages matches configured capacity", () => {
+  const energy = { energy_sources: [
+    { type: "battery", stat_rate: "sensor.b1", stat_soc: "sensor.soc1", capacity: 10 },
+    { type: "battery", stat_rate: "sensor.b2", stat_soc: "sensor.soc2", capacity: 30 },
+  ] };
+  const states = {
+    ...sample(),
+    "sensor.b1": mk(500, "W"),
+    "sensor.b2": mk(-250, "W"),
+    "sensor.soc1": mk(20, "%"),
+    "sensor.soc2": mk(80, "%"),
+  };
+  const model = buildFlowModel(states, attributes, energy);
+  assert.equal(model.batteryW, 250);
+  assert.equal(model.batterySoc, 65);
+});
+
+test("Energy kWh-only preferences never fake instantaneous watts", () => {
+  const energy = { energy_sources: [
+    { type: "grid", stat_energy_from: "sensor.total_import",
+      stat_energy_to: "sensor.total_export" },
+    { type: "solar", stat_energy_from: "sensor.total_solar" },
+  ] };
+  const model = buildFlowModel(sample(), attributes, energy);
+  assert.equal(model.gridW, -307);
+  assert.equal(model.solarW, 8200);
+  assert.equal(model.sourceMode, "ems");
+});
+
+test("native card preserves the circular four-node layout", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const { dirname, resolve } = await import("node:path");
+  const root = dirname(fileURLToPath(import.meta.url));
+  const card = readFileSync(resolve(root,
+    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"), "utf8");
+  for (const role of ["solar", "grid", "home", "battery"]) {
+    assert.match(card, new RegExp('class="node ' + role + '"'));
+  }
+  assert.match(card, /border-radius:50%/);
+  assert.match(card, /<path class="dots"/);
+  assert.match(card, /energy\/get_prefs/);
+  assert.doesNotMatch(card, /power-flow-card-plus\.js/);
+});

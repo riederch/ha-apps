@@ -155,3 +155,18 @@ versucht das EMS die JS-Ressource automatisch zu registrieren; bei
 YAML-Ressourcenverwaltung ist eine einmalige Ressourceneintragung nötig.
 
 [Einrichtung, Sensorzuordnung und Grenzen](docs/local-ems-flow.md).
+
+## Local EMS 0.4.0b2 – Power-Flow-Stil und Energy-Dashboard-Datenquellen
+
+Die integrierte Karte `custom:local-ems-flow-card` zeigt nun **runde, farbig
+umrandete Energiefluss-Knoten und animierte Punkte** in der vertrauten
+Anordnung PV oben, Netz links, Haus rechts, Batterie unten. Kein Sankey.
+
+Die Leistungsquellen werden standardmäßig **lesend aus den bestehenden
+Energy-Dashboard-Einstellungen** (`stat_rate` und `power_config`) übernommen.
+Eine fehlende Echtzeit-Leistung kann alternativ aus den EMS-Zuordnungen
+kommen; `source_mode: ems` erzwingt diese Quellen. **Wh/kWh-Zähler werden
+nicht als momentane W-Werte fehlinterpretiert.** Die Sicherheits-/EPS-Quellen
+bleiben separat konfigurierbar.
+
+[Details zur integrierten Energieflusskarte](docs/local-ems-flow.md).
