@@ -277,3 +277,38 @@ test("native card preserves the circular four-node layout", async () => {
   assert.match(card, /energy\/get_prefs/);
   assert.doesNotMatch(card, /power-flow-card-plus\.js/);
 });
+
+
+test("the card occupies a full 12-column Sections dashboard by default", async () => {
+  // The component's layout API is pure; no browser or Home Assistant
+  // connection is required to inspect it.
+  globalThis.HTMLElement ??= class {};
+  const { LocalEMSFlowCard } = await import(
+    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
+  );
+  const grid = LocalEMSFlowCard.prototype.getGridOptions();
+  assert.deepEqual(grid, {
+    columns: 12,
+    min_columns: 6,
+    max_columns: 12,
+    rows: "auto",
+  });
+});
+
+test("responsive circles stay aligned with the energy-flow topology", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const { resolve } = await import("node:path");
+  const card = readFileSync(resolve(
+    fileURLToPath(new URL(".", import.meta.url)),
+    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
+  ), "utf8");
+  for (const text of [
+    "left:16%;top:50%", "left:84%;top:50%",
+    "left:50%;top:24%", "left:50%;top:74%",
+    "min-width:0;position:relative",
+    "formatEntityState",
+  ]) {
+    assert.ok(card.includes(text), text);
+  }
+});
