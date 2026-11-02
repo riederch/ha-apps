@@ -138,3 +138,20 @@ auf AUS. Diese Version erzeugt eine *Lastabwurfanforderung*, führt aber
 **keine physischen Schaltbefehle** aus. Damit ist die EPS-Abschaltung noch
 nicht technisch umgesetzt. Details:
 [`docs/local-ems-devices.md`](docs/local-ems-devices.md).
+
+## Local EMS 0.4.0b1 – eigene Energieflusskarte
+
+Local EMS liefert nun **eine eigene, integrierte Dashboard-Karte** mit
+PV, Netz, Batterie und Hausverbrauch. Die bisherige `power-flow-card-plus`
+ist dafür nicht mehr erforderlich. Die Geräte-/Sensor-Entitäten werden
+einmalig im EMS hinterlegt; eine Dashboard-Karte benötigt nur:
+
+```yaml
+type: custom:local-ems-flow-card
+```
+
+Die Karte wird über die Integration ausgeliefert. In Storage-Dashboards
+versucht das EMS die JS-Ressource automatisch zu registrieren; bei
+YAML-Ressourcenverwaltung ist eine einmalige Ressourceneintragung nötig.
+
+[Einrichtung, Sensorzuordnung und Grenzen](docs/local-ems-flow.md).

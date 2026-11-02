@@ -3,6 +3,7 @@
   "name": "Local EMS",
   "after_dependencies": [
     "frontend",
+    "http",
     "lovelace"
   ],
   "categories": [
