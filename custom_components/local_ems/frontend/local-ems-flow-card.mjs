@@ -94,6 +94,7 @@ const CSS = [
   "overflow:visible;z-index:0;}",
   ".track,.dots{fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round;}",
   ".track{stroke:var(--divider-color,rgba(145,150,158,.3));stroke-width:2;}",
+  ".track[data-visible='false']{visibility:hidden;}",
   ".dots{stroke-width:5;stroke-dasharray:1 20;animation:power-dots 1.4s linear infinite;}",
   ".dots[data-active='false']{visibility:hidden;animation:none;}",
   "#solar-dots{stroke:var(--ems-solar);}",
@@ -151,9 +152,9 @@ const TEMPLATE = [
   '<div class="status" id="status" role="status" data-state="unknown"></div></div>',
   '<div class="canvas" role="group" aria-label="Energy power flow">',
   '<svg class="lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">',
-  '<path class="track" d="M16 50 H84"></path>',
-  '<path class="track" d="M50 24 V40 Q50 47 60 47 H84"></path>',
-  '<path class="track" d="M50 76 V60 Q50 53 60 53 H84"></path>',
+  '<path class="track" id="grid-track" d="M16 50 H84"></path>',
+  '<path class="track" id="solar-track" d="M50 24 V40 Q50 47 60 47 H84"></path>',
+  '<path class="track" id="battery-track" d="M50 76 V60 Q50 53 60 53 H84"></path>',
   '<path class="dots" id="grid-dots" data-active="false"></path>',
   '<path class="dots" id="solar-dots" data-active="false"></path>',
   '<path class="dots" id="battery-dots" data-active="false"></path>',
@@ -306,6 +307,9 @@ export class LocalEMSFlowCard extends HTMLElement {
     for (const el of this._root.querySelectorAll(".dots")) {
       el.dataset.active = "false";
     }
+    for (const el of this._root.querySelectorAll(".track")) {
+      el.dataset.visible = "true";
+    }
     this._root.getElementById("status").dataset.state = "unknown";
     this._root.querySelector('[data-icon="grid"]').setAttribute(
       "icon", "mdi:transmission-tower"
@@ -378,24 +382,27 @@ export class LocalEMSFlowCard extends HTMLElement {
         detail = model.inverterState;
       }
       this._text('[data-detail="' + name + '"]', detail);
-      this._text('[data-detail="' + name + '"]', detail);
       const detailEl = this._root.querySelector('[data-detail="' + name + '"]');
       if (detailEl) detailEl.title = detail;
     }
 
+    const moving = {
+      solar: model.directions.solar === "production",
+      grid: ["import", "export"].includes(model.directions.grid),
+      battery: ["discharge", "charge"].includes(model.directions.battery),
+    };
+    for (const name of Object.keys(moving)) {
+      this._root.getElementById(name + "-track").dataset.visible =
+        showZeroLines || moving[name] ? "true" : "false";
+    }
+    this._flow("solar", moving.solar, PATHS.solar, model.solarW);
     this._flow(
-      "solar", model.directions.solar === "production",
-      PATHS.solar, model.solarW
-    );
-    this._flow(
-      "grid", ["import", "export"].includes(model.directions.grid) ||
-        (showZeroLines && model.directions.grid === "idle"),
+      "grid", moving.grid,
       model.directions.grid === "export" ? PATHS.gridReverse : PATHS.grid,
       model.gridW
     );
     this._flow(
-      "battery", ["discharge", "charge"].includes(model.directions.battery) ||
-        (showZeroLines && model.directions.battery === "idle"),
+      "battery", moving.battery,
       model.directions.battery === "charge" ?
         PATHS.batteryReverse : PATHS.battery,
       model.batteryW
