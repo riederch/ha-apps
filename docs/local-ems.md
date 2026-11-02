@@ -105,3 +105,27 @@ gewählten Verbrauchszähler. Wenn der Zähler bei 0 W unverändert bleibt, ist
 ein erneutes HA-Update dennoch ein Mess-Heartbeat. Die Integration führt
 keine eigene dauerhafte Verbrauchshistorie, sondern hält nur aktuelle
 Stichproben bis zum Ende der laufenden Viertelstunde.
+
+## Integration im Test-Branch installieren
+
+Die neue Custom-Integration liegt zunächst nur auf `feature/local-ems-peak-monitor`; `main`
+und die produktive HA-Instanz bleiben unverändert. Bis zum Merge kann
+die Test-HA-Instanz die Integrationsdateien aus diesem Branch
+in `/config/custom_components/local_ems/` erhalten. Vor einem produktiven
+Einsatz sind die HACS-Prüfung und ein HA-Laufzeittest abzuschließen.
+
+**HACS-Validierung:** Das gemeinsame `ha-apps`-Repository enthält
+gleichzeitig Home-Assistant-Apps und diese Custom-Integration. Der HACS-Check
+prüft das ganze GitHub-Repository: Beschreibung, Topics und eine sauber
+geklärte Repository-Lizenz sowie die Branding-Assets (`icon.png`).
+Diese Metadaten sind derzeit noch offen; sie werden **nicht** durch das
+Anlegen von `hacs.json` ersetzt. Eine pauschale Lizenz für vorhandenen
+Fremdcode darf nicht ohne Prüfung hinzugefügt werden.
+
+## Dokumentierter Validierungsstand
+
+- Der reine Python-Rechenkern durchläuft die CI-Unittests.
+- Die Manifestvalidierung erfolgt über HA `hassfest`.
+- Die HACS-Publikationsvalidierung benötigt noch Repository-Metadaten.
+- Ein vollständiger Integrationstest in einer realen Home-Assistant-Instanz
+  steht aus. Die Software darf bis dahin nicht als produktionsbereit gelten.
