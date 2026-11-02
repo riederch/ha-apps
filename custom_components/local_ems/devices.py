@@ -76,6 +76,20 @@ def save_item(
     new_id = item_id or (id_factory or (lambda: uuid4().hex))()
     if any(row.get("id") == new_id and row.get("id") != item_id for row in current):
         raise ValueError("duplicate_id")
+    # A charging-enable switch must never also be registered as a
+    # separate flexible consumer: future controllers would fight each other.
+    if kind == CONF_CONSUMERS:
+        if any(
+            wallbox.get(WALLBOX_CHARGE_SWITCH) == item.get(CONSUMER_SWITCH)
+            for wallbox in options.get(CONF_WALLBOXES, [])
+        ):
+            raise ValueError("duplicate_entity")
+    else:
+        if item.get(WALLBOX_CHARGE_SWITCH) and any(
+            consumer.get(CONSUMER_SWITCH) == item.get(WALLBOX_CHARGE_SWITCH)
+            for consumer in options.get(CONF_CONSUMERS, [])
+        ):
+            raise ValueError("duplicate_entity")
     for row in current:
         if row.get("id") == item_id:
             continue
@@ -184,7 +198,11 @@ def catalog_snapshot(
         "consumers_count": len(consumers),
         "consumers_on": active,
         "consumers_unknown": unknown,
-        "consumer_power_kw_estimated": round(power_w / 1000, 3),
+        # Unknown relay state could mean an active load. Avoid presenting an
+        # incorrectly low numeric estimate as trustworthy.
+        "consumer_power_kw_estimated": (
+            round(power_w / 1000, 3) if unknown == 0 else None
+        ),
         "wallboxes_count": len(wallboxes),
         "catalog_consumers": consumers,
         "catalog_wallboxes": wallboxes,

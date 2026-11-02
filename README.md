@@ -63,7 +63,7 @@ Cloudflared Origin Auth ist ein schlanker Overlay-Fork von [`homeassistant-apps/
 
 Zusätzlich zu den oben beschriebenen Apps enthält dieses Repository die **Home-Assistant-Integration Local EMS** unter `custom_components/local_ems/`. Der App-Store installiert weiterhin nur die Apps, die Integration wird **separat über HACS** installiert.
 
-**Beta / Draft:** Der Rechenkern, das HA-Manifest und die technischen HACS-Prüfungen werden automatisiert validiert; optionale GitHub-Katalog-Metadaten sind noch nicht gesetzt, und der HA-Laufzeittest steht aus. **Erst nach Abschluss der Tests produktiv verwenden.** Auf dem Entwicklungsbranch `feature/local-ems-peak-monitor` befindet sich die erste lesende Beta für die Überwachung der 15-Minuten-Bezugsleistung.
+**Beta:** Der Rechenkern, das HA-Manifest und die technischen HACS-Prüfungen werden automatisiert validiert; optionale GitHub-Katalog-Metadaten sind noch nicht gesetzt. Ein tatsächlicher HA-Laufzeittest steht noch aus. **Vor produktiven Schaltfunktionen ist ein Funktionstest erforderlich.** Die bisherige Version 0.1 umfasst die lesende 15-Minuten-Spitzenüberwachung.
 
 ### Geplante Einrichtung
 

@@ -96,6 +96,17 @@ class LocalEMSCatalogTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate_entity"):
             save_item(options, CONF_WALLBOXES, wallbox(name="Other"))
 
+    def test_wallbox_switch_cannot_be_registered_as_heater(self):
+        options = save_item({}, CONF_WALLBOXES,
+                            wallbox(switch="switch.shared"), id_factory=lambda: "w")
+        with self.assertRaisesRegex(ValueError, "duplicate_entity"):
+            save_item(options, CONF_CONSUMERS, consumer("switch.shared"))
+        options = save_item({}, CONF_CONSUMERS,
+                            consumer("switch.shared"), id_factory=lambda: "h")
+        with self.assertRaisesRegex(ValueError, "duplicate_entity"):
+            save_item(options, CONF_WALLBOXES,
+                      wallbox(switch="switch.shared"))
+
     def test_wrong_domain_rejected(self):
         with self.assertRaisesRegex(ValueError, "invalid_entity_domain"):
             save_item({}, CONF_CONSUMERS, consumer("light.foo"))
@@ -145,6 +156,7 @@ class LocalEMSCatalogTests(unittest.TestCase):
         snap = catalog_snapshot(options, {}.get)
         self.assertEqual(snap["consumers_unknown"], 1)
         self.assertEqual(snap["consumers_on"], 0)
+        self.assertIsNone(snap["consumer_power_kw_estimated"])
 
 
 if __name__ == "__main__":

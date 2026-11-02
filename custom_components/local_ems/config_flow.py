@@ -79,7 +79,11 @@ def _validate_source(hass, user_input: dict) -> dict[str, str]:
 def _optional_entity(name: str, entity_domain: str, item: dict) -> tuple:
     """Return an optional HA entity selector with the saved value preselected."""
     value = item.get(name)
-    marker = vol.Optional(name, default=value) if value else vol.Optional(name)
+    # suggested_value is visible but, unlike default, can be cleared in the UI.
+    marker = (
+        vol.Optional(name, description={"suggested_value": value})
+        if value else vol.Optional(name)
+    )
     return marker, selector.EntitySelector(
         selector.EntitySelectorConfig(domain=entity_domain)
     )
@@ -96,7 +100,8 @@ def _consumer_form(item: dict) -> vol.Schema:
                 "fan_heater": "Heizlüfter",
                 "other": "Sonstiger Verbraucher",
             }),
-        vol.Required(CONSUMER_SWITCH, default=item.get(CONSUMER_SWITCH, "")):
+        (vol.Required(CONSUMER_SWITCH, default=item[CONSUMER_SWITCH])
+         if item.get(CONSUMER_SWITCH) else vol.Required(CONSUMER_SWITCH)):
             selector.EntitySelector(selector.EntitySelectorConfig(domain="switch")),
         vol.Required(CONSUMER_RATED_POWER, default=item.get(CONSUMER_RATED_POWER, 2000)):
             vol.All(vol.Coerce(float), vol.Range(min=1, max=50000)),
