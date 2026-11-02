@@ -40,13 +40,14 @@ from .const import (
     WALLBOX_PHASE_COUNT,
 )
 from .devices import remove_item, save_item, set_sources
+from .source_filters import entity_selector_filter, incompatible_selected_units
 
 
 def _energy_form(source: str, limit: float, warning: float, stale: int) -> vol.Schema:
     return vol.Schema(
         {
-            vol.Required(CONF_SOURCE, default=source): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor")
+            vol.Required(CONF_SOURCE, default=source): _filtered_entity(
+                CONF_SOURCE, "sensor"
             ),
             vol.Required(CONF_LIMIT_KW, default=limit): vol.All(
                 vol.Coerce(float), vol.Range(min=0.1, max=100)
@@ -76,6 +77,15 @@ def _validate_source(hass, user_input: dict) -> dict[str, str]:
     return {}
 
 
+def _filtered_entity(field: str, entity_domain: str) -> selector.EntitySelector:
+    """Filter the dropdown by domain and physical measurement unit."""
+    return selector.EntitySelector(
+        selector.EntitySelectorConfig(
+            filter=entity_selector_filter(field, entity_domain)
+        )
+    )
+
+
 def _optional_entity(name: str, entity_domain: str, item: dict) -> tuple:
     """Return an optional HA entity selector with the saved value preselected."""
     value = item.get(name)
@@ -84,9 +94,7 @@ def _optional_entity(name: str, entity_domain: str, item: dict) -> tuple:
         vol.Optional(name, description={"suggested_value": value})
         if value else vol.Optional(name)
     )
-    return marker, selector.EntitySelector(
-        selector.EntitySelectorConfig(domain=entity_domain)
-    )
+    return marker, _filtered_entity(name, entity_domain)
 
 
 def _consumer_form(item: dict) -> vol.Schema:
@@ -102,7 +110,7 @@ def _consumer_form(item: dict) -> vol.Schema:
             }),
         (vol.Required(CONSUMER_SWITCH, default=item[CONSUMER_SWITCH])
          if item.get(CONSUMER_SWITCH) else vol.Required(CONSUMER_SWITCH)):
-            selector.EntitySelector(selector.EntitySelectorConfig(domain="switch")),
+            _filtered_entity(CONSUMER_SWITCH, "switch"),
         vol.Required(CONSUMER_RATED_POWER, default=item.get(CONSUMER_RATED_POWER, 2000)):
             vol.All(vol.Coerce(float), vol.Range(min=1, max=50000)),
         vol.Required(CONSUMER_PRIORITY, default=item.get(CONSUMER_PRIORITY, 50)):
@@ -226,6 +234,8 @@ class LocalEMSOptionsFlow(config_entries.OptionsFlow):
         payload = dict(user_input)
         if kind == CONF_WALLBOXES:
             payload[WALLBOX_PHASE_COUNT] = int(payload[WALLBOX_PHASE_COUNT])
+        if incompatible_selected_units(payload, self.hass.states.get):
+            raise ValueError("unit_mismatch")
         try:
             options = save_item(dict(self.config_entry.options), kind, payload, selected_id)
         except ValueError as err:
@@ -271,15 +281,19 @@ class LocalEMSOptionsFlow(config_entries.OptionsFlow):
         )
 
     async def async_step_energy_sources(self, user_input: dict | None = None):
+        errors = {}
         if user_input is not None:
-            return self._finish(
-                set_sources(dict(self.config_entry.options), user_input)
-            )
+            errors = incompatible_selected_units(user_input, self.hass.states.get)
+            if not errors:
+                return self._finish(
+                    set_sources(dict(self.config_entry.options), user_input)
+                )
         return self.async_show_form(
             step_id="energy_sources",
             data_schema=_sources_form(
                 dict(self.config_entry.options.get(CONF_ENERGY_SOURCES, {}))
             ),
+            errors=errors,
         )
 
     async def async_step_add_consumer(self, user_input: dict | None = None):

@@ -90,3 +90,26 @@ Für registrierte Verbraucher sind keine YAML-Einträge erforderlich.
 
 Regulärer Status: `Beta`. HACS/Hassfest und Unit-Tests sichern die
 Struktur, aber nicht das reale Schaltverhalten (da nicht implementiert).
+
+## Einheitsspezifische Entitätsfilter (0.2.0b2)
+
+Die Entitätsauswahl verwendet Home Assistants nativen `EntitySelector` mit
+`filter.unit_of_measurement`. Statt alle `sensor.*`-Entitäten anzubieten,
+werden die Dropdowns wie im Energie-Dashboard nach Messgröße gefiltert:
+
+| Feld | Zugelassene Einheiten |
+|---|---|
+| Netzbezugszähler (Peak Monitor) | Wh, kWh |
+| Netz-, PV-, Haus-, Batterie-Leistung | W, kW |
+| Verbraucher-Leistungsmessung | W, kW |
+| Wallbox-Ladeleistung | W, kW |
+| Batterie-Ladezustand | % |
+| Wallbox-Ladestrom-Limit | A |
+
+Schalter bleiben nach Domain `switch` gefiltert; Ladefreigabe und
+Fahrzeugstatus nach `switch` bzw. `binary_sensor`. Die Vorauswahl
+kombiniert Domain und Einheit, um ungeeignete Entitäten auszublenden.
+Zusätzlich wird beim Speichern geprüft, ob die Einheit vorhandener
+Live-Entitäten wirklich zum Feld passt. Die Filter konvertieren keine
+Einheiten; sie schränken die Auswahl ein. Nicht geladene/temporär offline
+stehende Entitäten blockieren bestehende Zuordnungen nicht allein deshalb.

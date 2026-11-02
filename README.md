@@ -115,3 +115,11 @@ Ladestromregelung**. Die spätere Überschussautomatik wird nach
 Validierung der Messwerte und Schaltgrenzen entwickelt.
 
 Details: [Geräteverwaltung](docs/local-ems-devices.md).
+
+### Local EMS 0.2.0b2 – Einheitsspezifische Auswahl
+
+Die Konfigurationsdialoge filtern HA-Entitäten jetzt nach Einheit: Wh/kWh
+für importierte Energie, W/kW für Leistung, % für Batterie-SoC und A für
+den Wallbox-Ladestrom. Es sind keine manuellen Änderungen an bestehenden
+Gerätezuordnungen notwendig. Details stehen in
+[`docs/local-ems-devices.md`](docs/local-ems-devices.md).
