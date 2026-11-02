@@ -154,3 +154,22 @@ modular Home Energy Management System (EMS) integration`, Topics
 Der HACS-CI-Status mit konfigurierten Ausnahmen ist **keine Freigabe für
 den öffentlichen HACS-Katalog**. Ein Laufzeittest mit der tatsächlichen
 Home-Assistant-Version und KNG-Smartmeter-Daten ist zusätzlich notwendig.
+
+## Fix 0.1.0b2: Anzeige unter Integrationen statt Helfern
+
+Im ersten Release war `integration_type: helper` gesetzt. Dies führt
+dazu, dass Home Assistant die Konfiguration unter **Helfer** einordnet.
+Das ist für den modularen EMS-Core mit mehreren angebundenen Systemen
+falsch. Ab `0.1.0b2` ist der Manifesttyp `hub`, sodass Home Assistant
+die Integration unter **Einstellungen → Geräte & Dienste → Integrationen**
+aufführt.
+
+**Update:** HACS → Local EMS → aktualisieren, anschließend Home Assistant
+neu starten. Die bestehende Config-Entry, die Quellsensor-Zuordnung und
+die von HA vergebenen Entity-IDs werden durch die Typkorrektur nicht
+automatisch gelöscht oder umbenannt. Keine manuelle Änderung in
+`.storage` und keine neue YAML-Datei erforderlich.
+
+Falls die Integration danach weiterhin fehlt, **Einstellungen → System →
+Protokolle** nach `local_ems` bzw. `custom_components.local_ems` durchsuchen.
+Der Laufzeittest ist getrennt von Manifest-/HACS-CI zu validieren.
