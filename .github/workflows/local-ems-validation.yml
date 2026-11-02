@@ -30,3 +30,8 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+          # This repository is a custom HACS source, not a public catalog submission.
+          # Description/topics are catalog metadata and still need GitHub UI settings.
+          # GitHub's license API sees the default branch only; new LICENSE is on this PR.
+          # Once merged, validate the GPL license normally on main.
+          ignore: ${{ github.ref == 'refs/heads/main' && 'description topics' || 'description topics license' }}

@@ -129,3 +129,28 @@ Fremdcode darf nicht ohne Prüfung hinzugefügt werden.
 - Die HACS-Publikationsvalidierung benötigt noch Repository-Metadaten.
 - Ein vollständiger Integrationstest in einer realen Home-Assistant-Instanz
   steht aus. Die Software darf bis dahin nicht als produktionsbereit gelten.
+
+## HACS: eigene Quelle vs. öffentlicher Katalog
+
+Diese Integration wird als **benutzerdefiniertes Repository** in HACS
+verwendet. Der CI-Lauf prüft die Integrationsstruktur, das Manifest,
+Branding und HACS-Konfiguration.
+
+Die **Katalog-Metadatenprüfungen** für `description` und `topics` sind
+im HACS-Action-Workflow ausdrücklich als Ausnahme dokumentiert, weil
+GitHub-Metadaten über den verbundenen Schreibzugang derzeit nicht editiert
+werden können. Diese Angaben sind für eine öffentliche Katalog-Aufnahme
+weiterhin erforderlich und **nicht als erledigt zu betrachten**.
+
+Der `license`-Check wird nur auf PR-Branches übersprungen, da GitHubs
+Lizenz-API die `LICENSE` auf dem Default-Branch auswertet. Auf `main`
+wird der Lizenz-Check erneut vollständig durchgeführt. Falls die Lizenz
+danach nicht erkannt wird, bleibt die HACS-Validierung offen.
+
+Empfohlene GitHub-Metadaten: Beschreibung `Home Assistant apps and a local,
+modular Home Energy Management System (EMS) integration`, Topics
+`home-assistant`, `hacs`, `ems`, `energy-management`.
+
+Der HACS-CI-Status mit konfigurierten Ausnahmen ist **keine Freigabe für
+den öffentlichen HACS-Katalog**. Ein Laufzeittest mit der tatsächlichen
+Home-Assistant-Version und KNG-Smartmeter-Daten ist zusätzlich notwendig.
