@@ -32,6 +32,20 @@ from .const import (
     DEFAULT_WARNING_KW,
     DOMAIN,
     ENERGY_SOURCE_KEYS,
+    CONF_GRID_SAFETY,
+    CONF_EMS_ENABLED,
+    GRID_STATE_ENTITY,
+    GRID_ON_VALUES,
+    GRID_EPS_VALUES,
+    GRID_CONTACT_ENTITY,
+    GRID_CONTACT_ON_IS_PRESENT,
+    METER_HEARTBEAT_ENTITY,
+    METER_TIMEOUT_SECONDS,
+    MODE_ENTITY,
+    MODE_ALLOWED_VALUES,
+    GRID_RECOVERY_SECONDS,
+    DEFAULT_METER_TIMEOUT_SECONDS,
+    DEFAULT_GRID_RECOVERY_SECONDS,
     WALLBOX_CHARGE_POWER,
     WALLBOX_CHARGE_SWITCH,
     WALLBOX_CONNECTED,
@@ -40,6 +54,7 @@ from .const import (
     WALLBOX_PHASE_COUNT,
 )
 from .devices import remove_item, save_item, set_sources
+from .grid_safety import validate_safety_config
 from .source_filters import entity_selector_filter, incompatible_selected_units
 
 
@@ -95,6 +110,61 @@ def _optional_entity(name: str, entity_domain: str, item: dict) -> tuple:
         if value else vol.Optional(name)
     )
     return marker, _filtered_entity(name, entity_domain)
+
+
+def _multi_entity_selector(domains: list[str]) -> selector.EntitySelector:
+    """Select status entities independently of any inverter manufacturer."""
+    return selector.EntitySelector(selector.EntitySelectorConfig(
+        filter={"domain": domains}
+    ))
+
+
+def _optional_status_entity(name: str, current: dict, domains: list[str]) -> tuple:
+    value = current.get(name)
+    key = (
+        vol.Optional(name, description={"suggested_value": value})
+        if value else vol.Optional(name)
+    )
+    return key, _multi_entity_selector(domains)
+
+
+def _grid_safety_form(current: dict, enabled: bool) -> vol.Schema:
+    """Safety inputs are selectable HA entities plus user-defined raw states."""
+    fields: dict = {
+        vol.Required(
+            CONF_EMS_ENABLED, default=enabled
+        ): selector.BooleanSelector(),
+        vol.Required(
+            GRID_ON_VALUES, default=current.get(GRID_ON_VALUES, "")
+        ): vol.All(str, vol.Length(max=255)),
+        vol.Required(
+            GRID_EPS_VALUES, default=current.get(GRID_EPS_VALUES, "")
+        ): vol.All(str, vol.Length(max=255)),
+        vol.Required(
+            MODE_ALLOWED_VALUES, default=current.get(MODE_ALLOWED_VALUES, "")
+        ): vol.All(str, vol.Length(max=255)),
+        vol.Required(
+            METER_TIMEOUT_SECONDS,
+            default=current.get(METER_TIMEOUT_SECONDS, DEFAULT_METER_TIMEOUT_SECONDS)
+        ): vol.All(vol.Coerce(int), vol.Range(min=3, max=600)),
+        vol.Required(
+            GRID_RECOVERY_SECONDS,
+            default=current.get(GRID_RECOVERY_SECONDS, DEFAULT_GRID_RECOVERY_SECONDS)
+        ): vol.All(vol.Coerce(int), vol.Range(min=0, max=3600)),
+        vol.Required(
+            GRID_CONTACT_ON_IS_PRESENT,
+            default=current.get(GRID_CONTACT_ON_IS_PRESENT, True)
+        ): selector.BooleanSelector(),
+    }
+    for key, domains in (
+        (GRID_STATE_ENTITY, ["sensor", "select", "input_select"]),
+        (GRID_CONTACT_ENTITY, ["binary_sensor"]),
+        (METER_HEARTBEAT_ENTITY, ["sensor", "binary_sensor"]),
+        (MODE_ENTITY, ["sensor", "select", "input_select"]),
+    ):
+        marker, entity_selector = _optional_status_entity(key, current, domains)
+        fields[marker] = entity_selector
+    return vol.Schema(fields)
 
 
 def _consumer_form(item: dict) -> vol.Schema:
@@ -199,6 +269,8 @@ class LocalEMSConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_CONSUMERS: [],
                         CONF_WALLBOXES: [],
                         CONF_ENERGY_SOURCES: {},
+                        CONF_GRID_SAFETY: {},
+                        CONF_EMS_ENABLED: False,
                     },
                 )
         return self.async_show_form(
@@ -243,12 +315,36 @@ class LocalEMSOptionsFlow(config_entries.OptionsFlow):
         return self._finish(options)
 
     async def async_step_init(self, user_input: dict | None = None):
-        choices = ["peak_settings", "energy_sources", "add_consumer", "add_wallbox"]
+        choices = [
+            "peak_settings", "energy_sources", "grid_safety",
+            "add_consumer", "add_wallbox"
+        ]
         if self._items(CONF_CONSUMERS):
             choices += ["edit_consumer", "remove_consumer"]
         if self._items(CONF_WALLBOXES):
             choices += ["edit_wallbox", "remove_wallbox"]
         return self.async_show_menu(step_id="init", menu_options=choices)
+
+    async def async_step_grid_safety(self, user_input: dict | None = None):
+        """Map grid, heartbeat and operating-mode signals through the HA UI."""
+        errors = {}
+        if user_input is not None:
+            values = dict(user_input)
+            enabled = bool(values.pop(CONF_EMS_ENABLED, False))
+            errors = validate_safety_config(values)
+            if not errors:
+                options = dict(self.config_entry.options)
+                options[CONF_GRID_SAFETY] = values
+                options[CONF_EMS_ENABLED] = enabled
+                return self._finish(options)
+        return self.async_show_form(
+            step_id="grid_safety",
+            data_schema=_grid_safety_form(
+                dict(self.config_entry.options.get(CONF_GRID_SAFETY, {})),
+                bool(self.config_entry.options.get(CONF_EMS_ENABLED, False)),
+            ),
+            errors=errors,
+        )
 
     async def async_step_peak_settings(self, user_input: dict | None = None):
         opts = self.config_entry.options

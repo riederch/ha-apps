@@ -28,6 +28,13 @@ from .const import (
     DOMAIN,
 )
 from .peak import Sample, calculate_peak, quarter_start_utc
+from .grid_safety import evaluate_grid_safety
+from .const import (
+    CONF_GRID_SAFETY,
+    GRID_STATE_ENTITY,
+    GRID_CONTACT_ENTITY,
+    MODE_ENTITY,
+)
 from .devices import catalog_snapshot
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,6 +53,9 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
         self._source_ok = False
         self._unsubs: list = []
         self.data = {"valid": False, "quality": "starting"}
+        self._grid_good_since: datetime | None = None
+        self._grid_watch_signature: tuple[str, ...] = ()
+        self._grid_watch_unsub = None
 
     def _to_sample(self, state: State | None, timestamp: datetime | None = None) -> Sample | None:
         if state is None or state.state in ("unknown", "unavailable", ""):
@@ -113,9 +123,14 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
         self._append(self._to_sample(live_state, live_state.last_reported if live_state else None))
 
     def _publish(self) -> None:
-        # Registry data remains visible even while the KNG meter is unavailable.
+        # Safety and registry remain visible even while the peak meter fails.
         catalog = catalog_snapshot(self.entry.options, self.hass.states.get)
         now = dt_util.utcnow()
+        safety, self._grid_good_since = evaluate_grid_safety(
+            self.entry.options, self.hass.states.get, now,
+            self._grid_good_since,
+        )
+        catalog.update(asdict(safety))
         quarter = quarter_start_utc(now, self.hass.config.time_zone)
         if self._quarter != quarter:
             self.async_set_updated_data({**catalog, "valid": False, "quality": "quarter_rollover"})
@@ -153,7 +168,32 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
         )
         self.async_set_updated_data(snapshot)
 
+    def _update_grid_watch(self) -> None:
+        """Follow whichever vendor-neutral sources the user has configured."""
+        options = self.entry.options.get(CONF_GRID_SAFETY, {})
+        entities = tuple(sorted(set(
+            value for key in (
+                GRID_STATE_ENTITY, GRID_CONTACT_ENTITY, MODE_ENTITY
+            )
+            if isinstance((value := options.get(key)), str) and value
+        )))
+        if entities == self._grid_watch_signature:
+            return
+        if self._grid_watch_unsub is not None:
+            self._grid_watch_unsub()
+            self._grid_watch_unsub = None
+        self._grid_watch_signature = entities
+        self._grid_good_since = None
+        if entities:
+            self._grid_watch_unsub = async_track_state_change_event(
+                self.hass, list(entities), self._on_grid_changed
+            )
+
+    async def _on_grid_changed(self, _event: Event[EventStateChangedData]) -> None:
+        self._publish()
+
     async def async_start(self) -> None:
+        self._update_grid_watch()
         self._unsubs.append(
             async_track_state_change_event(
                 self.hass, [self.source], self._on_source_changed
@@ -165,7 +205,7 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
             )
         )
         self._unsubs.append(
-            async_track_time_interval(self.hass, self._on_timer, timedelta(seconds=10))
+            async_track_time_interval(self.hass, self._on_timer, timedelta(seconds=2))
         )
         await self._reload_history()
         self._publish()
@@ -198,10 +238,16 @@ class LocalEMSCoordinator(DataUpdateCoordinator[dict]):
         self._publish()
 
     async def async_shutdown(self) -> None:
+        if self._grid_watch_unsub is not None:
+            self._grid_watch_unsub()
+            self._grid_watch_unsub = None
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()
 
     def refresh_configuration(self) -> None:
-        """Recompute when UI-adjustable thresholds change."""
+        """Re-subscribe to changed input entities and recalculate permissions."""
+        self._update_grid_watch()
+        # Always re-arm a full recovery period after a config edit.
+        self._grid_good_since = None
         self._publish()

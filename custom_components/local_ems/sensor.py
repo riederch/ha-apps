@@ -23,6 +23,13 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
         [
+            *(LocalEMSGridSafetySensor(coordinator, entry, key, name, unit)
+              for key, name, unit in (
+                  ("grid_state", "Grid safety state", None),
+                  ("safety_reason", "Grid safety reason", None),
+                  ("recovery_remaining_seconds", "Grid recovery remaining", "s"),
+                  ("meter_age_seconds", "Grid meter heartbeat age", "s"),
+              )),
             *(LocalEMSSensor(coordinator, entry, key, label, unit)
               for key, label, unit in SENSOR_DESCRIPTIONS),
             *(LocalEMSCatalogSensor(coordinator, entry, key, label, unit)
@@ -122,3 +129,51 @@ class LocalEMSCatalogSensor(CoordinatorEntity[LocalEMSCoordinator], SensorEntity
             return {"calculation": "measured when available, otherwise rated power",
                     "control_mode": "monitor_only"}
         return {}
+
+
+class LocalEMSGridSafetySensor(CoordinatorEntity[LocalEMSCoordinator], SensorEntity):
+    """Vendor-neutral electrical grid and EMS interlock status."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(
+        self, coordinator: LocalEMSCoordinator, entry: ConfigEntry,
+        key: str, label: str, unit: str | None
+    ) -> None:
+        super().__init__(coordinator)
+        self.key = key
+        self._attr_name = label
+        self._attr_unique_id = f"{entry.entry_id}_{key}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name="Local EMS",
+            manufacturer="Local EMS",
+            model="Modular EMS",
+        )
+        if unit:
+            self._attr_native_unit_of_measurement = unit
+            self._attr_device_class = SensorDeviceClass.DURATION
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def available(self) -> bool:
+        return self.key not in ("meter_age_seconds",) or (
+            self.coordinator.data.get(self.key) is not None
+        )
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get(self.key)
+
+    @property
+    def extra_state_attributes(self):
+        options = self.coordinator.entry.options.get("grid_safety", {})
+        return {
+            "safety_policy": "fail_closed",
+            "actuator_mode": "monitor_only",
+            "grid_state_source": options.get("grid_state_entity"),
+            "grid_contact_source": options.get("grid_contact_entity"),
+            "heartbeat_source": options.get("meter_heartbeat_entity"),
+            "operating_mode_source": options.get("operating_mode_entity"),
+        }
