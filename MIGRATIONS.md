@@ -1,5 +1,15 @@
 # Migrationen
 
+## 2026-11-02 – Gitea Runner `5.0.0-rch2` → `5.0.0-rch3`
+
+- Vor dem Runner-Start entfernt ein `env -i`-Entrypoint alle geerbten Home-Assistant-Umgebungsvariablen mit Ausnahme einer Positivliste (`PATH`, `HOME`, `TZ`); auch `SUPERVISOR_TOKEN` / `HASSIO_TOKEN` gelangen dadurch nicht mehr per Environment in Host-Mode-Jobs.
+- Runtime-Konfiguration, `/data/.runner`, Registrierung, Runner-Name und Labels bleiben erhalten. Keine Neuregistrierung erforderlich.
+- Die App muss aktualisiert und **neu gestartet** werden, um die Schutzmaßnahme wirksam zu machen.
+- Bereits vor der Aktualisierung offengelegte Tokens und Logs bleiben ein getrennter Sicherheitsvorfall; Zugangsdaten widerrufen/rotieren und Log-Berechtigungen prüfen.
+- Host-Mode bleibt eine Vertrauensgrenze: absichtlich bösartige Workflows und CI-Secrets aus anderer Quelle können nicht generell durch diese Bereinigung unterbunden werden.
+- Rollback auf `5.0.0-rch2` möglich, aber wegen erneut geerbter HA-Tokens nicht empfohlen.
+
+
 ## 2026-10-22 – Security and compatibility update
 
 ### Vaultwarden `0.29.0` → `0.29.1` / Server `1.37.2` → `1.37.4`
