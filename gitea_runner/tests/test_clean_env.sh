@@ -16,7 +16,7 @@ result=$(env \
   GITEA_RUNNER_REGISTRATION_TOKEN="$CANARY_GITEA" \
   OTHER_UNEXPECTED_CREDENTIAL="$CANARY_OTHER" \
   TZ='Europe/Vienna' \
-  "$CLEAN_ENV" /usr/bin/env)
+  sh "$CLEAN_ENV" /usr/bin/env)
 
 count=$(printf '%s\n' "$result" | grep -c '^[A-Za-z_][A-Za-z_0-9]*=' || :)
 if [ "$count" -ne 3 ]; then
@@ -44,7 +44,7 @@ for name in SUPERVISOR_TOKEN HASSIO_TOKEN GITEA_RUNNER_REGISTRATION_TOKEN OTHER_
     exit 1
   fi
 done
-if "$CLEAN_ENV" >/dev/null 2>&1; then
+if sh "$CLEAN_ENV" >/dev/null 2>&1; then
   echo 'FAILED: empty command should be rejected.' >&2
   exit 1
 fi
