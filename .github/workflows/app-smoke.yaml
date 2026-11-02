@@ -5,6 +5,7 @@ on:
     paths:
       - "cloudflared_auth/**"
       - "gitea_mcp/**"
+      - "gitea_runner/**"
       - ".github/workflows/app-smoke.yaml"
   push:
     branches: [main]
@@ -28,6 +29,9 @@ jobs:
           bash -n cloudflared_auth/rootfs/etc/s6-overlay/s6-rc.d/prepare/run.sh
           bash -n cloudflared_auth/rootfs/run.sh
           sh -n gitea_mcp/run.sh
+          sh -n gitea_runner/run.sh
+          sh -n gitea_runner/clean-env.sh
+          sh gitea_runner/tests/test_clean_env.sh
           python3 -m py_compile gitea_mcp/mcp_bridge.py gitea_mcp/binary_upload.py
           python3 -m unittest discover -s gitea_mcp/tests -v
       - name: Verify Cloudflared upstream prepare import
@@ -74,6 +78,14 @@ jobs:
             --pull \
             --file cloudflared_auth/Dockerfile \
             cloudflared_auth
+      - name: Build Gitea Runner
+        shell: bash
+        run: |
+          docker buildx build \
+            --platform "${{ matrix.platform }}" \
+            --build-arg "BUILD_ARCH=${{ matrix.arch }}" \
+            --file gitea_runner/Dockerfile \
+            gitea_runner
       - name: Build Gitea MCP
         shell: bash
         run: |
