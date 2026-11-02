@@ -123,3 +123,18 @@ für importierte Energie, W/kW für Leistung, % für Batterie-SoC und A für
 den Wallbox-Ladestrom. Es sind keine manuellen Änderungen an bestehenden
 Gerätezuordnungen notwendig. Details stehen in
 [`docs/local-ems-devices.md`](docs/local-ems-devices.md).
+
+## Local EMS 0.3.0b1 – herstellerunabhängige Netzfreigabe
+
+Neu: Über **Konfigurieren → Netz-/EPS-Sicherheit und Betriebsmodus**
+lassen sich Statuswerte eines beliebigen Wechselrichters, optional ein
+physischer Netzmeldekontakt, der Smartmeter-Heartbeat und erlaubte
+Wechselrichter-Betriebsmodi zuordnen. Der Zustand wird als HA-Entitäten
+veröffentlicht. Die Eingaben verwenden **keine** festen Sofar-Register oder
+andere herstellerspezifische Werte.
+
+**Sicherheit:** Die EMS-Hauptfreigabe steht nach einem Upgrade standardmäßig
+auf AUS. Diese Version erzeugt eine *Lastabwurfanforderung*, führt aber
+**keine physischen Schaltbefehle** aus. Damit ist die EPS-Abschaltung noch
+nicht technisch umgesetzt. Details:
+[`docs/local-ems-devices.md`](docs/local-ems-devices.md).

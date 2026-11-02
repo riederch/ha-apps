@@ -45,7 +45,8 @@
           "remove_consumer": "Schaltverbraucher entfernen",
           "add_wallbox": "Wallbox hinzufügen",
           "edit_wallbox": "Wallbox bearbeiten",
-          "remove_wallbox": "Wallbox entfernen"
+          "remove_wallbox": "Wallbox entfernen",
+          "grid_safety": "Netz-/EPS-Sicherheit und Betriebsmodus"
         }
       },
       "peak_settings": {
@@ -161,6 +162,23 @@
       "confirm_remove_wallbox": {
         "title": "Wallbox entfernen?",
         "description": "Wallbox-Zuordnung entfernen? Die Wallbox bleibt unverändert."
+      },
+      "grid_safety": {
+        "title": "Netz-/EPS-Sicherheit und Betriebsmodus",
+        "description": "Herstellerunabhängige Netzfreigabe. Trage die *tatsächlichen* Statuswerte der gewählten Entitäten ein (Entwicklerwerkzeuge → Zustände). Ein Smartmeter-Ausfall ist nur ein Verdacht, keine EPS-Bestätigung. Diese Version überwacht ausschließlich: Es werden noch keine Verbraucher ausgeschaltet.",
+        "data": {
+          "ems_enabled": "EMS-Regelung aktivieren (noch keine Schaltbefehle)",
+          "grid_state_entity": "Wechselrichter-Betriebszustand (optional)",
+          "grid_on_values": "Werte für Netzbetrieb (kommagetrennt)",
+          "grid_eps_values": "Werte für EPS/Inselbetrieb (kommagetrennt)",
+          "grid_contact_entity": "Physischer Netzkontakt (optional)",
+          "grid_contact_on_is_present": "Kontakt ON bedeutet Netz vorhanden",
+          "meter_heartbeat_entity": "Smartmeter-Heartbeat-Entität (optional)",
+          "meter_timeout_seconds": "Meldungsausfall melden nach (Sekunden)",
+          "operating_mode_entity": "Wechselrichter-Betriebsmodus (optional)",
+          "mode_allowed_values": "Erlaubte Betriebsmodi (kommagetrennt)",
+          "grid_recovery_seconds": "Stabilisierung nach Netzwiederkehr (Sekunden)"
+        }
       }
     },
     "error": {
@@ -177,7 +195,10 @@
       "invalid_phase_count": "Bitte 1 oder 3 Phasen wählen",
       "duplicate_entity": "Diese Entität ist bereits hinterlegt",
       "duplicate_id": "Doppelte interne Geräte-ID",
-      "unknown_item": "Das Gerät wurde nicht gefunden"
+      "unknown_item": "Das Gerät wurde nicht gefunden",
+      "grid_values_required": "Mindestens einen Wert für Netzbetrieb festlegen",
+      "overlapping_grid_values": "Netz- und EPS-Werte dürfen sich nicht überschneiden",
+      "mode_values_required": "Mindestens einen erlaubten Betriebsmodus angeben"
     },
     "abort": {
       "item_not_found": "Gerät nicht mehr vorhanden"

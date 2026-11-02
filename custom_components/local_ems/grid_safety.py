@@ -64,9 +64,8 @@ def validate_safety_config(config: Mapping[str, Any]) -> dict[str, str]:
     errors: dict[str, str] = {}
     inverter = str(config.get(GRID_STATE_ENTITY) or "")
     contact = str(config.get(GRID_CONTACT_ENTITY) or "")
-    if not inverter and not contact:
-        # Partial configuration is okay, but the core will stay fail-closed.
-        return errors
+    # Partial configuration is okay, but the core stays fail-closed. Even
+    # when no grid source has been chosen, mode mappings must be consistent.
     grid_values = parse_values(config.get(GRID_ON_VALUES))
     eps_values = parse_values(config.get(GRID_EPS_VALUES))
     if inverter and not grid_values:

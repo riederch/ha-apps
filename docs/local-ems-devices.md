@@ -113,3 +113,80 @@ Zusätzlich wird beim Speichern geprüft, ob die Einheit vorhandener
 Live-Entitäten wirklich zum Feld passt. Die Filter konvertieren keine
 Einheiten; sie schränken die Auswahl ein. Nicht geladene/temporär offline
 stehende Entitäten blockieren bestehende Zuordnungen nicht allein deshalb.
+
+## Netzstatus und EPS-Sicherheit – herstellerneutral (0.3.0b1)
+
+Unter **Einstellungen → Geräte & Dienste → Local EMS → Konfigurieren →
+Netz-/EPS-Sicherheit und Betriebsmodus** können folgende Quellen unabhängig
+voneinander zugeordnet werden:
+
+| Quelle | Home-Assistant-Typ | Bedeutung |
+|---|---|---|
+| Wechselrichter-Betriebszustand | Sensor, Select oder Input Select | Statuswerte für Netzbetrieb und EPS frei zuordnen |
+| Physischer Netzkontakt (optional) | Binary Sensor | `on` oder `off` bedeutet Netz vorhanden, per Schalter umkehrbar |
+| Smartmeter-Heartbeat (optional) | Sensor oder Binary Sensor | Letzte Zustandsmeldung `last_reported`, z.B. alle 1 s |
+| Wechselrichter-Betriebsmodus (optional) | Sensor, Select oder Input Select | Nur explizit erlaubte Modi geben EMS-Regelung frei |
+| EMS-Hauptfreigabe | HA-Config-Entität `switch` + Konfigurationsoption | Standard AUS, keine physische Schaltaktion in dieser Version |
+
+### Beispiel für einen Sofar (kein herstellerspezifischer Standard!)
+
+- Betriebsstatus: `sensor.hyd20ktl_3p_systemzustand`.
+- Lade-/Betriebsmodus: `select.hyd20ktl_3p_betriebsmodus_des_ladegerats`.
+- Smartmeter-Heartbeat: passender KNG-Sensor, **wenn er tatsächlich bei jeder
+  Meldung von HA neu geschrieben wird**, z.B. `sensor.kng_p_in`.
+- Netzbetriebs-/EPS-Werte: **exakte Rohwerte** unter **Entwicklerwerkzeuge →
+  Zustände** ablesen und kommagetrennt eintragen. Nicht blind `2` und `3`
+  annehmen, weil Hersteller/Integration Zustände unterschiedlich benennen.
+- Erlaubter Betriebsmodus: den tatsächlichen Zustandswert des Select für
+  `Self Consumption` bzw. `Eigenverbrauch` ablesen und eintragen.
+
+Andere Nutzer können Status- und Betriebsmoduswerte selbst festlegen.
+Benötigt ein Wechselrichter keinen gesonderten Modus, kann die
+Betriebsmoduszuordnung leer bleiben; bei einem einfachen Netzmeldekontakt ist
+auch kein Wechselrichter-Betriebsstatus erforderlich. **Nur das Vorliegen
+eines Smartmeter-Heartbeats beweist dagegen niemals Netzbetrieb.**
+
+### Statusmodell / Sicherheitsregeln
+
+- **EPS bestätigt:** Wechselrichter meldet einen als EPS konfigurierten
+  Zustand → `eps`, sofortige Sperre.
+- **Netzkontakt aus:** als Netzabwesenheit konfigurierter Kontaktsignalwert
+  → `grid_lost`, Sperre, unabhängig von widersprechendem WR-Status.
+- **Smartmeter meldet nicht:** wenn `last_reported` älter als z.B. 10 s
+  oder die Quelle nicht verfügbar ist, bei sonst erkanntem Netzbetrieb →
+  `suspect`, Sperre, **kein** behaupteter EPS-Zustand.
+- **Unbekannter WR-Status:** `unknown`, Sperre.
+- **WR im nicht erlaubten Betriebsmodus:** Netzstatus bleibt `on_grid`,
+  Freigabe dennoch gesperrt.
+- **Netzbetrieb stabil und zulässiger Modus:** Nach einer einstellbaren
+  Stabilisierungszeit (Standard 120 s) `on_grid` und Freigabe, sofern
+  EMS aktiviert ist.
+- **Keine Statusquelle konfiguriert:** `unconfigured`, keine Freigabe.
+- **EMS ausgeschaltet:** weiterhin Überwachung, aber keine Regelung und
+  keine Lastabwurfanforderung durch das EMS.
+
+### Smartmeter-Heartbeat: technische Einschränkung
+
+Home Assistant aktualisiert `last_reported` nur dann, wenn eine Integration
+erneut einen Zustand in Home Assistant schreibt. **Nicht jede MQTT-,
+Modbus- oder Herstellerintegration reicht unveränderte Telegramme weiter.**
+Deshalb vor Aktivierung anhand der gewählten Entität prüfen, ob
+`last_reported` auch bei unverändertem Energiewert tatsächlich ca. alle
+1 s aktualisiert wird. Ein veralteter Wert kann ebenso Netzwerk-, Geräte-
+oder HA-Kommunikationsprobleme anzeigen und ist kein definitiver Stromausfall.
+
+Die Altersprüfung läuft unabhängig vom Peak-Monitor auf dessen Ereignis-
+und Zeitbasis. Die Analyse wird als native Status- und Binary-Sensor-Entitäten
+veröffentlicht; keine zweite Messwertdatenbank.
+
+### Wichtige Grenze: derzeit KEINE reale Notstromabschaltung
+
+Die in 0.3.0b1 neu veröffentlichten Werte `control_allowed` und
+`load_shed_requested` sind **nur Entscheidungen des Sicherheitskerns**.
+Selbst wenn `load_shed_requested` an ist, werden noch **keine** Switches,
+Heizstäbe, Heizlüfter oder Wallboxen tatsächlich ausgeschaltet.
+
+Für reale Lastabwurf-Funktionen braucht es gesonderte aktivierbare
+Aktorsteuerung, Schaltbestätigung, manuellen Override und elektrische
+Überprüfung. Für kritische Lasten ist ein hardwareseitiger Verriegelungs-
+oder Lastabwurfkontakt unabhängig von Home Assistant vorzuziehen.
