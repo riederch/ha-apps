@@ -2,13 +2,14 @@ FROM docker.io/gitea/runner:5.0.0
 
 USER root
 
-ARG BUILD_VERSION=5.0.0-rch2
+ARG BUILD_VERSION=5.0.0-rch3
 ARG BUILD_ARCH=amd64
 
 RUN apk add --no-cache bash ca-certificates git jq python3 tini
 
 COPY run.sh /run-ha.sh
-RUN chmod 0755 /run-ha.sh
+COPY clean-env.sh /clean-env.sh
+RUN chmod 0755 /run-ha.sh /clean-env.sh
 
 WORKDIR /data
 
@@ -18,4 +19,4 @@ LABEL io.hass.version="${BUILD_VERSION}" \
       org.opencontainers.image.source="https://github.com/riederch/ha-apps" \
       org.opencontainers.image.description="Home Assistant wrapper for Gitea Runner 5.0.0"
 
-ENTRYPOINT ["/sbin/tini", "--", "/run-ha.sh"]
+ENTRYPOINT ["/clean-env.sh", "/sbin/tini", "--", "/run-ha.sh"]
