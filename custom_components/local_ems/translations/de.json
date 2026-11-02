@@ -1,0 +1,44 @@
+{
+  "title": "Local EMS",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Local EMS – Viertelstundenmonitor",
+        "description": "Wähle einen kumulierten Netzbezugszähler in Wh oder kWh. Keine YAML-Konfiguration nötig.",
+        "data": {
+          "source": "Netzbezugszähler",
+          "limit_kw": "Viertelstunden-Leistungsgrenze (kW)",
+          "warning_kw": "Vorwarnschwelle (kW)",
+          "stale_seconds": "Maximales Messwertalter (Sekunden)"
+        }
+      }
+    },
+    "error": {
+      "source_missing": "Entität nicht gefunden",
+      "source_unit": "Quelle muss Wh oder kWh liefern",
+      "source_unavailable": "Quelle liefert keinen numerischen Wert",
+      "warning_above_limit": "Vorwarnschwelle muss unter der Grenze liegen"
+    },
+    "abort": {
+      "already_configured": "Diese Datenquelle wurde bereits konfiguriert"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Peak-Monitor-Einstellungen",
+        "data": {
+          "limit_kw": "Viertelstunden-Leistungsgrenze (kW)",
+          "warning_kw": "Vorwarnschwelle (kW)",
+          "stale_seconds": "Maximales Messwertalter (Sekunden)"
+        }
+      }
+    },
+    "error": {
+      "warning_above_limit": "Vorwarnschwelle muss unter der Grenze liegen",
+      "source_missing": "Entität nicht gefunden",
+      "source_unit": "Quelle muss Wh oder kWh liefern",
+      "source_unavailable": "Quelle liefert keinen numerischen Wert"
+    }
+  }
+}
