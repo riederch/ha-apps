@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Local EMS – Peak Monitor",
-        "description": "Select a cumulative grid-import energy sensor (Wh or kWh). No YAML is required.",
+        "description": "Select a cumulative grid-import energy sensor (Wh or kWh). No YAML required.",
         "data": {
           "source": "Import energy sensor",
           "limit_kw": "Quarter-hour demand limit (kW)",
@@ -14,10 +14,20 @@
       }
     },
     "error": {
-      "source_missing": "Entity was not found",
-      "source_unit": "Source must have unit Wh or kWh",
-      "source_unavailable": "Source is not numeric",
-      "warning_above_limit": "Warning must be below the limit"
+      "source_missing": "Source entity not found",
+      "source_unit": "Energy source must be in Wh or kWh",
+      "source_unavailable": "Energy source unavailable or not numeric",
+      "warning_above_limit": "Warning must be below demand limit",
+      "name_required": "A name is required",
+      "invalid_collection": "Invalid device category",
+      "invalid_entity_domain": "The entity has the wrong domain",
+      "switch_required": "A switch entity is required",
+      "power_required": "Rated power must be 1–50000 W",
+      "wallbox_entity_required": "Choose at least one wallbox entity",
+      "invalid_phase_count": "Please use 1 or 3 phases",
+      "duplicate_entity": "This device is already registered",
+      "duplicate_id": "Duplicate internal device ID",
+      "unknown_item": "The device was not found"
     },
     "abort": {
       "already_configured": "This source is already configured"
@@ -26,19 +36,151 @@
   "options": {
     "step": {
       "init": {
-        "title": "Peak Monitor settings",
-        "data": {
-          "limit_kw": "Quarter-hour demand limit (kW)",
-          "warning_kw": "Warning threshold (kW)",
-          "stale_seconds": "Maximum sample age (seconds)"
+        "title": "Local EMS – device management",
+        "menu_options": {
+          "peak_settings": "Peak Monitor settings",
+          "energy_sources": "Energy source mapping",
+          "add_consumer": "Add switch consumer",
+          "edit_consumer": "Edit switch consumer",
+          "remove_consumer": "Remove switch consumer",
+          "add_wallbox": "Add wallbox",
+          "edit_wallbox": "Edit wallbox",
+          "remove_wallbox": "Remove wallbox"
         }
+      },
+      "peak_settings": {
+        "title": "Peak Monitor settings",
+        "description": "Settings for the existing quarter-hour peak monitor.",
+        "data": {
+          "limit_kw": "Demand limit (kW)",
+          "warning_kw": "Warning threshold (kW)",
+          "stale_seconds": "Maximum meter age (seconds)"
+        }
+      },
+      "energy_sources": {
+        "title": "Energy source mapping",
+        "description": "Optional grid, PV, house and battery sources. Grid power must be positive for import and negative for export. No devices are controlled.",
+        "data": {
+          "grid_power_sensor": "Signed grid power (+import/-export)",
+          "pv_power_sensor": "PV production power",
+          "house_power_sensor": "House power",
+          "battery_power_sensor": "Battery power (+discharge/-charge)",
+          "battery_soc_sensor": "Battery state of charge"
+        }
+      },
+      "add_consumer": {
+        "title": "Add switch consumer",
+        "description": "Register heaters and other switched loads. Control and timing parameters are saved only for future control.",
+        "data": {
+          "name": "Name",
+          "consumer_type": "Consumer type",
+          "switch_entity": "Home Assistant switch",
+          "power_sensor": "Optional measured power sensor",
+          "rated_power_w": "Rated power (W)",
+          "priority": "Priority (1 = first)",
+          "min_on_seconds": "Minimum running time (seconds)",
+          "min_off_seconds": "Minimum off-time (seconds)",
+          "surplus_margin_w": "Extra surplus margin (W)",
+          "enabled": "Include in future planning (no switching yet)"
+        }
+      },
+      "consumer_details": {
+        "title": "Edit switch consumer",
+        "description": "Edit a consumer. The real switch state is never changed.",
+        "data": {
+          "name": "Name",
+          "consumer_type": "Consumer type",
+          "switch_entity": "Home Assistant switch",
+          "power_sensor": "Optional measured power sensor",
+          "rated_power_w": "Rated power (W)",
+          "priority": "Priority (1 = first)",
+          "min_on_seconds": "Minimum running time (seconds)",
+          "min_off_seconds": "Minimum off-time (seconds)",
+          "surplus_margin_w": "Extra surplus margin (W)",
+          "enabled": "Include in future planning (no switching yet)"
+        }
+      },
+      "edit_consumer": {
+        "title": "Edit switch consumer",
+        "data": {
+          "item_id": "Consumer"
+        }
+      },
+      "remove_consumer": {
+        "title": "Remove switch consumer",
+        "data": {
+          "item_id": "Consumer"
+        }
+      },
+      "confirm_remove_consumer": {
+        "title": "Remove consumer?",
+        "description": "Remove the mapping? The real switch is not changed."
+      },
+      "add_wallbox": {
+        "title": "Add wallbox",
+        "description": "Map wallbox entities. Charging is not enabled, disabled or adjusted.",
+        "data": {
+          "name": "Wallbox name",
+          "charge_power_sensor": "Charging power sensor (optional)",
+          "charge_enable_switch": "Charge enable switch (optional)",
+          "current_limit_number": "Charge current limit number (optional)",
+          "connected_binary_sensor": "Vehicle connected binary sensor (optional)",
+          "phase_count": "Phases (planned setting)",
+          "max_current_a": "Maximum charging current (A, planned)",
+          "priority": "Priority (1 = first)",
+          "enabled": "Include in future planning (no switching yet)"
+        }
+      },
+      "wallbox_details": {
+        "title": "Edit wallbox",
+        "description": "Edit wallbox. The EMS only reads states.",
+        "data": {
+          "name": "Wallbox name",
+          "charge_power_sensor": "Charging power sensor (optional)",
+          "charge_enable_switch": "Charge enable switch (optional)",
+          "current_limit_number": "Charge current limit number (optional)",
+          "connected_binary_sensor": "Vehicle connected binary sensor (optional)",
+          "phase_count": "Phases (planned setting)",
+          "max_current_a": "Maximum charging current (A, planned)",
+          "priority": "Priority (1 = first)",
+          "enabled": "Include in future planning (no switching yet)"
+        }
+      },
+      "edit_wallbox": {
+        "title": "Edit wallbox",
+        "data": {
+          "item_id": "Wallbox"
+        }
+      },
+      "remove_wallbox": {
+        "title": "Remove wallbox",
+        "data": {
+          "item_id": "Wallbox"
+        }
+      },
+      "confirm_remove_wallbox": {
+        "title": "Remove wallbox?",
+        "description": "Remove the wallbox mapping? The charger is not changed."
       }
     },
     "error": {
-      "warning_above_limit": "Warning must be below the limit",
-      "source_missing": "Entity was not found",
-      "source_unit": "Source must have unit Wh or kWh",
-      "source_unavailable": "Source is not numeric"
+      "source_missing": "Source entity not found",
+      "source_unit": "Energy source must be in Wh or kWh",
+      "source_unavailable": "Energy source unavailable or not numeric",
+      "warning_above_limit": "Warning must be below demand limit",
+      "name_required": "A name is required",
+      "invalid_collection": "Invalid device category",
+      "invalid_entity_domain": "The entity has the wrong domain",
+      "switch_required": "A switch entity is required",
+      "power_required": "Rated power must be 1–50000 W",
+      "wallbox_entity_required": "Choose at least one wallbox entity",
+      "invalid_phase_count": "Please use 1 or 3 phases",
+      "duplicate_entity": "This device is already registered",
+      "duplicate_id": "Duplicate internal device ID",
+      "unknown_item": "The device was not found"
+    },
+    "abort": {
+      "item_not_found": "Device is no longer configured"
     }
   }
 }
