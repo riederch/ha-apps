@@ -45,7 +45,8 @@
           "remove_consumer": "Remove switch consumer",
           "add_wallbox": "Add wallbox",
           "edit_wallbox": "Edit wallbox",
-          "remove_wallbox": "Remove wallbox"
+          "remove_wallbox": "Remove wallbox",
+          "grid_safety": "Grid/EPS safety and inverter operating mode"
         }
       },
       "peak_settings": {
@@ -161,6 +162,23 @@
       "confirm_remove_wallbox": {
         "title": "Remove wallbox?",
         "description": "Remove the wallbox mapping? The charger is not changed."
+      },
+      "grid_safety": {
+        "title": "Grid/EPS safety and inverter operating mode",
+        "description": "Vendor-neutral safety gate. Enter the actual raw states from Developer Tools → States. Missing meter updates are only a suspicion, not confirmed EPS. This beta only monitors; physical devices are not switched.",
+        "data": {
+          "ems_enabled": "Enable EMS regulation (no physical switching yet)",
+          "grid_state_entity": "Inverter state entity (optional)",
+          "grid_on_values": "Values indicating on-grid (comma separated)",
+          "grid_eps_values": "Values indicating EPS/island (comma separated)",
+          "grid_contact_entity": "Physical grid contact (optional)",
+          "grid_contact_on_is_present": "Contact ON means public grid present",
+          "meter_heartbeat_entity": "Smart meter heartbeat entity (optional)",
+          "meter_timeout_seconds": "Mark heartbeat missing after (seconds)",
+          "operating_mode_entity": "Inverter operating mode entity (optional)",
+          "mode_allowed_values": "Allowed operating-mode values (comma separated)",
+          "grid_recovery_seconds": "Stable grid recovery delay (seconds)"
+        }
       }
     },
     "error": {
@@ -177,7 +195,10 @@
       "invalid_phase_count": "Please use 1 or 3 phases",
       "duplicate_entity": "This device is already registered",
       "duplicate_id": "Duplicate internal device ID",
-      "unknown_item": "The device was not found"
+      "unknown_item": "The device was not found",
+      "grid_values_required": "Configure at least one on-grid state value",
+      "overlapping_grid_values": "On-grid and EPS values must not overlap",
+      "mode_values_required": "Configure at least one permitted operating mode"
     },
     "abort": {
       "item_not_found": "Device is no longer configured"

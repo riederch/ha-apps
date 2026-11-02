@@ -25,6 +25,12 @@ async def async_setup_entry(
             ("valid", "Measurement valid"),
             ("warning", "Demand warning"),
             ("limit_reached", "Demand limit reached"),
+            ("grid_confirmed", "Grid confirmed"),
+            ("eps_detected", "EPS detected"),
+            ("meter_heartbeat_ok", "Grid meter heartbeat healthy"),
+            ("mode_allowed", "Inverter mode permitted"),
+            ("control_allowed", "EMS control permitted"),
+            ("load_shed_requested", "Load shedding requested (monitor only)"),
         )
     )
 
@@ -57,8 +63,25 @@ class LocalEMSBinarySensor(
 
     @property
     def available(self) -> bool:
+        if self.key in (
+            "grid_confirmed", "eps_detected", "meter_heartbeat_ok",
+            "mode_allowed", "control_allowed", "load_shed_requested",
+        ):
+            return self.coordinator.data.get(self.key) is not None
         return self.key == "valid" or bool(self.coordinator.data.get("valid"))
 
     @property
     def is_on(self) -> bool:
         return bool(self.coordinator.data.get(self.key))
+
+    @property
+    def extra_state_attributes(self):
+        if self.key in (
+            "control_allowed", "load_shed_requested", "grid_confirmed"
+        ):
+            return {
+                "reason": self.coordinator.data.get("safety_reason"),
+                "grid_state": self.coordinator.data.get("grid_state"),
+                "actuator_mode": "monitor_only",
+            }
+        return {}

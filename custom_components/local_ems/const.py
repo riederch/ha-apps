@@ -60,3 +60,22 @@ CATALOG_SENSORS = (
     ("consumer_power_kw_estimated", "Estimated flexible consumption", "kW"),
     ("wallboxes_count", "Registered wallboxes", None),
 )
+
+# Generic grid/EPS/meter/operating-mode safety. All sources optional until
+# configured. There is no manufacturer or inverter register dependency.
+CONF_GRID_SAFETY = "grid_safety"
+CONF_EMS_ENABLED = "ems_enabled"
+
+GRID_STATE_ENTITY = "grid_state_entity"
+GRID_ON_VALUES = "grid_on_values"
+GRID_EPS_VALUES = "grid_eps_values"
+GRID_CONTACT_ENTITY = "grid_contact_entity"
+GRID_CONTACT_ON_IS_PRESENT = "grid_contact_on_is_present"
+METER_HEARTBEAT_ENTITY = "meter_heartbeat_entity"
+METER_TIMEOUT_SECONDS = "meter_timeout_seconds"
+MODE_ENTITY = "operating_mode_entity"
+MODE_ALLOWED_VALUES = "mode_allowed_values"
+GRID_RECOVERY_SECONDS = "grid_recovery_seconds"
+
+DEFAULT_METER_TIMEOUT_SECONDS = 10
+DEFAULT_GRID_RECOVERY_SECONDS = 120

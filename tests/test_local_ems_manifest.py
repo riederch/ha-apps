@@ -22,7 +22,7 @@ class LocalEMSManifestTests(unittest.TestCase):
     def test_recorder_integration_and_version(self):
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
         self.assertIn("recorder", manifest["dependencies"])
-        self.assertEqual(manifest["version"], "0.2.0b2")
+        self.assertEqual(manifest["version"], "0.3.0b1")
 
 
 if __name__ == "__main__":
