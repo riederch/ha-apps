@@ -1,0 +1,20 @@
+{
+  "domain": "local_ems",
+  "name": "Local EMS",
+  "categories": [
+    "energy"
+  ],
+  "codeowners": [
+    "@riederch"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "recorder"
+  ],
+  "documentation": "https://github.com/riederch/ha-apps/blob/main/docs/local-ems.md",
+  "integration_type": "helper",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/riederch/ha-apps/issues",
+  "requirements": [],
+  "version": "0.1.0b1"
+}

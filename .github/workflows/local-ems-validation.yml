@@ -1,0 +1,37 @@
+name: Local EMS integration validation
+
+on:
+  pull_request:
+    paths:
+      - "custom_components/local_ems/**"
+      - "hacs.json"
+      - "docs/local-ems.md"
+      - ".github/workflows/local-ems-validation.yml"
+  push:
+    paths:
+      - "custom_components/local_ems/**"
+      - "hacs.json"
+      - ".github/workflows/local-ems-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: HACS repository validation
+        uses: hacs/action@main
+        with:
+          category: integration
+          # This repository is a custom HACS source, not a public catalog submission.
+          # Description/topics are catalog metadata and still need GitHub UI settings.
+          # GitHub's license API sees the default branch only; new LICENSE is on this PR.
+          # Once merged, validate the GPL license normally on main.
+          ignore: ${{ github.ref == 'refs/heads/main' && 'description topics' || 'description topics license' }}

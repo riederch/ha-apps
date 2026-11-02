@@ -1,0 +1,44 @@
+{
+  "title": "Local EMS",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Local EMS – Peak Monitor",
+        "description": "Select a cumulative grid-import energy sensor (Wh or kWh). No YAML is required.",
+        "data": {
+          "source": "Import energy sensor",
+          "limit_kw": "Quarter-hour demand limit (kW)",
+          "warning_kw": "Warning threshold (kW)",
+          "stale_seconds": "Maximum sample age (seconds)"
+        }
+      }
+    },
+    "error": {
+      "source_missing": "Entity was not found",
+      "source_unit": "Source must have unit Wh or kWh",
+      "source_unavailable": "Source is not numeric",
+      "warning_above_limit": "Warning must be below the limit"
+    },
+    "abort": {
+      "already_configured": "This source is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Peak Monitor settings",
+        "data": {
+          "limit_kw": "Quarter-hour demand limit (kW)",
+          "warning_kw": "Warning threshold (kW)",
+          "stale_seconds": "Maximum sample age (seconds)"
+        }
+      }
+    },
+    "error": {
+      "warning_above_limit": "Warning must be below the limit",
+      "source_missing": "Entity was not found",
+      "source_unit": "Source must have unit Wh or kWh",
+      "source_unavailable": "Source is not numeric"
+    }
+  }
+}

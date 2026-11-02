@@ -58,3 +58,27 @@ Gitea Runner verwendet den offiziellen Runner `5.0.0` aus `docker.io/gitea/runne
 Die Vaultwarden-App basiert auf [`hassio-addons/app-vaultwarden`](https://github.com/hassio-addons/app-vaultwarden) und verwendet Vaultwarden `1.37.4`.
 
 Cloudflared Origin Auth ist ein schlanker Overlay-Fork von [`homeassistant-apps/app-cloudflared`](https://github.com/homeassistant-apps/app-cloudflared), aktuell auf App-Basis `7.0.19` mit Cloudflared `2026.10.3`. Details zu den übernommenen Komponenten stehen in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+## Local EMS (HACS-Integration, Beta)
+
+Zusätzlich zu den oben beschriebenen Apps enthält dieses Repository die **Home-Assistant-Integration Local EMS** unter `custom_components/local_ems/`. Der App-Store installiert weiterhin nur die Apps, die Integration wird **separat über HACS** installiert.
+
+**Beta / Draft:** Der Rechenkern, das HA-Manifest und die technischen HACS-Prüfungen werden automatisiert validiert; optionale GitHub-Katalog-Metadaten sind noch nicht gesetzt, und der HA-Laufzeittest steht aus. **Erst nach Abschluss der Tests produktiv verwenden.** Auf dem Entwicklungsbranch `feature/local-ems-peak-monitor` befindet sich die erste lesende Beta für die Überwachung der 15-Minuten-Bezugsleistung.
+
+### Geplante Einrichtung
+
+1. HACS → benutzerdefinierte Repositories → `https://github.com/riederch/ha-apps` als Typ **Integration** hinzufügen.
+2. Die Integration **Local EMS** installieren und Home Assistant neu starten.
+3. Einstellungen → Geräte & Dienste → Integration hinzufügen → **Local EMS**.
+4. Als Bezugssensor `sensor.kng_p_in` auswählen; 10 kW Grenzwert und 9 kW Warnschwelle sind die Startwerte.
+5. Die erzeugten Sensoren und Warnentitäten in Dashboard/Automationen nutzen. Keine YAML-Konfiguration erforderlich.
+
+Dokumentierte Architektur und Einschränkungen: [`docs/local-ems.md`](docs/local-ems.md).
+
+**Wichtig:** Diese erste Fassung ist kein zugelassener Netzleistungsbegrenzer, sondern eine rein lesende Prognose. Bei unvollständigen Quelldaten werden Berechnungen ausdrücklich als ungültig markiert.
+
+## Lizenzen
+
+**Eigener Quellcode** dieses Repositories, insbesondere `custom_components/local_ems/`, steht unter der **GNU GPL-3.0-or-later**. Der vollständige Lizenztext liegt in [`LICENSE`](LICENSE). Die Abgrenzung gegenüber Fremdcode erläutert [`LICENSE_SCOPE.md`](LICENSE_SCOPE.md).
+
+**Fremdkomponenten, übernommene MIT-lizenzierte App-Bestandteile und externe Runtime-Images** behalten ihre jeweiligen Lizenzbedingungen. Copyright-Hinweise und Herkunft sind unter [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) dokumentiert. Die GPL für unsere eigenen Teile ist keine Umlizenzierung fremder Werke.
