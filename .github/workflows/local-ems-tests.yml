@@ -37,5 +37,6 @@ jobs:
         run: |
           node --check custom_components/local_ems/frontend/local-ems-flow-card.mjs
           node --check custom_components/local_ems/frontend/flow-model.mjs
+          node --check custom_components/local_ems/frontend/energy-preferences.mjs
       - name: Run energy-flow unit tests
         run: node --test tests/test-local-ems-flow.mjs

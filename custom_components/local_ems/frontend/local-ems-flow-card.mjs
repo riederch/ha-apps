@@ -1,170 +1,219 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/** A standalone energy-flow Lovelace card shipped by the Local EMS integration. */
+/**
+ * Local EMS Energy Flow – independently implemented circular power-flow card.
+ * The round topology is familiar from Home Assistant's Energy Distribution
+ * and Power Flow Card Plus, but has no imported code or runtime dependency
+ * on another dashboard card.
+ */
 import { buildFlowModel, formatWatts } from "./flow-model.mjs";
 
-const TEXTS = {
+const TRANSLATIONS = {
   de: {
     title: "Energiefluss",
-    solar: "Photovoltaik",
+    solar: "Solar",
     grid: "Netz",
-    battery: "Batterie",
     home: "Haus",
-    loading: "Local EMS wird geladen …",
-    missing: "Local EMS Energy flow ist nicht vorhanden. Bitte EMS-Quellen in der Integration zuordnen.",
-    notConfigured: "EMS-Energiequellen noch nicht zugeordnet.",
-    freq: "Netzfrequenz",
-    inverter: "Wechselrichter",
-    on_grid: "Netz vorhanden",
+    battery: "Batterie",
+    on_grid: "Netzbetrieb",
     eps: "EPS / Inselbetrieb",
     grid_lost: "Netzausfall",
     suspect: "Netzstatus unsicher",
     recovering: "Netz stabilisiert sich",
     unknown: "Netzstatus unbekannt",
-    unconfigured: "Netzüberwachung nicht eingerichtet",
-    import: "Netzbezug",
+    unconfigured: "Netzüberwachung nicht konfiguriert",
+    missing: "Local EMS Energiefluss-Entität nicht gefunden.",
+    noSources: "Keine aktuellen Leistungsquellen zugeordnet: im Energy-Dashboard oder Local EMS konfigurieren.",
+    import: "Bezug",
     export: "Einspeisung",
-    discharge: "Entladung",
-    charge: "Ladung",
+    discharge: "Entladen",
+    charge: "Laden",
     production: "Erzeugung",
-    idle: "Keine Leistung",
-    notAvailable: "Keine Messwerte",
+    idle: "",
+    sourceEnergy: "Energy-Dashboard",
+    sourceEms: "Local EMS",
+    inverter: "Wechselrichter",
+    invalid: "Messwert nicht verfügbar",
   },
   en: {
     title: "Energy flow",
-    solar: "Solar PV",
+    solar: "Solar",
     grid: "Grid",
-    battery: "Battery",
     home: "Home",
-    loading: "Local EMS is loading …",
-    missing: "Local EMS Energy flow was not found. Configure EMS energy sources first.",
-    notConfigured: "EMS energy sources are not configured yet.",
-    freq: "Grid frequency",
-    inverter: "Inverter",
+    battery: "Battery",
     on_grid: "Grid connected",
-    eps: "EPS / island mode",
+    eps: "EPS / islanded",
     grid_lost: "Grid outage",
-    suspect: "Grid status uncertain",
+    suspect: "Grid state uncertain",
     recovering: "Grid recovering",
-    unknown: "Grid status unknown",
+    unknown: "Grid state unknown",
     unconfigured: "Grid status not configured",
+    missing: "Local EMS energy-flow entity was not found.",
+    noSources: "No live power sources configured. Set up Energy Dashboard or Local EMS.",
     import: "Import",
     export: "Export",
     discharge: "Discharging",
     charge: "Charging",
     production: "Producing",
-    idle: "Idle",
-    notAvailable: "No live measurement",
+    idle: "",
+    sourceEnergy: "Energy Dashboard",
+    sourceEms: "Local EMS",
+    inverter: "Inverter",
+    invalid: "Measurement unavailable",
   },
 };
 
-const STYLES = [
-  ":host{display:block;}",
-  "ha-card{padding:16px;overflow:hidden;}",
-  ".head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;}",
-  ".title{font-size:1.15rem;font-weight:600;color:var(--primary-text-color);}",
-  ".status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:20px;",
-  "font-size:.76rem;line-height:1.3;color:var(--secondary-text-color);",
-  "background:var(--secondary-background-color);max-width:62%;text-align:right;}",
-  ".dot{height:7px;width:7px;flex-shrink:0;border-radius:100%;background:currentColor;}",
-  ".status[data-state='on_grid']{color:var(--success-color,#39986c);}",
-  ".status[data-state='eps'],.status[data-state='grid_lost']{color:var(--error-color,#cc4444);}",
-  ".status[data-state='suspect'],.status[data-state='recovering']{color:var(--warning-color,#dd9800);}",
-  ".canvas{position:relative;width:100%;height:322px;overflow:hidden;}",
-  ".links{position:absolute;inset:0;height:100%;width:100%;overflow:visible;pointer-events:none;}",
-  ".track{fill:none;stroke:var(--divider-color,rgba(127,127,127,.22));stroke-width:4;stroke-linecap:round;}",
-  ".flow{fill:none;stroke-width:4.5;stroke-linecap:round;",
-  "stroke-dasharray:2 14;animation:travel 1.3s linear infinite;}",
-  ".flow.off{opacity:0;animation:none;}",
-  "#flow-solar{stroke:var(--warning-color,#d7a300);}",
-  "#flow-grid{stroke:var(--info-color,#349ad7);}",
-  "#flow-battery{stroke:var(--success-color,#38a57b);}",
-  "@keyframes travel{to{stroke-dashoffset:-32;}}",
+const PATHS = {
+  grid: "M16 50 H84",
+  gridReverse: "M84 50 H16",
+  solar: "M50 24 V40 Q50 47 60 47 H84",
+  battery: "M50 76 V60 Q50 53 60 53 H84",
+  batteryReverse: "M84 53 H60 Q50 53 50 60 V76",
+};
+
+// Percent-based paths keep the same power-flow topology on phones, tablets,
+// and widescreen dashboards. SVG vector-effect keeps lines a consistent width.
+const CSS = [
+  ":host{display:block;--ems-solar:var(--warning-color,#eba526);",
+  "--ems-grid:var(--info-color,#3395cc);",
+  "--ems-home:var(--success-color,#36aca0);",
+  "--ems-battery:#bb6baf;}",
+  "ha-card{padding:18px 12px 15px;overflow:hidden;}",
+  ".header{display:flex;align-items:center;justify-content:space-between;gap:12px;",
+  "padding:0 8px 12px;}",
+  ".title{color:var(--primary-text-color);font-size:1.14rem;font-weight:600;}",
+  ".status{border-radius:15px;background:var(--secondary-background-color);",
+  "font-size:.73rem;line-height:1.3;padding:6px 9px;color:var(--secondary-text-color);",
+  "display:inline-flex;align-items:center;gap:6px;max-width:57%;}",
+  ".status::before{content:'';display:inline-block;border-radius:50%;width:7px;height:7px;",
+  "flex:none;background:currentColor;}",
+  ".status[data-state='on_grid']{color:var(--success-color,#39a178);}",
+  ".status[data-state='eps'],.status[data-state='grid_lost']{color:var(--error-color,#e25959);}",
+  ".status[data-state='suspect'],.status[data-state='recovering']{color:var(--warning-color,#c99d30);}",
+  ".canvas{height:356px;position:relative;isolation:isolate;}",
+  ".lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;",
+  "overflow:visible;z-index:0;}",
+  ".track,.dots{fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round;}",
+  ".track{stroke:var(--divider-color,rgba(145,150,158,.3));stroke-width:2;}",
+  ".track[data-visible='false']{visibility:hidden;}",
+  ".dots{stroke-width:5;stroke-dasharray:1 20;animation:power-dots 1.4s linear infinite;}",
+  ".dots[data-active='false']{visibility:hidden;animation:none;}",
+  "#solar-dots{stroke:var(--ems-solar);}",
+  "#grid-dots{stroke:var(--ems-grid);}",
+  "#battery-dots{stroke:var(--ems-battery);}",
+  "@keyframes power-dots{from{stroke-dashoffset:0;}to{stroke-dashoffset:-84;}}",
   ".node{position:absolute;transform:translate(-50%,-50%);",
-  "width:clamp(76px,26%,122px);min-height:80px;",
+  "width:clamp(78px,23%,116px);aspect-ratio:1;box-sizing:border-box;",
+  "border:none;background:transparent;padding:0;cursor:pointer;color:var(--primary-text-color);",
+  "display:flex;align-items:center;justify-content:center;font:inherit;z-index:1;}",
+  ".node:focus-visible{outline:2px solid var(--primary-color);outline-offset:6px;",
+  "border-radius:50%;}",
+  ".disc{box-sizing:border-box;width:100%;height:100%;aspect-ratio:1;",
+  "border:3px solid var(--ring);border-radius:50%;",
+  "background:var(--card-background-color,var(--ha-card-background,#fff));",
   "display:flex;flex-direction:column;align-items:center;justify-content:center;",
-  "padding:8px 5px;border:1px solid var(--divider-color);",
-  "border-radius:15px;background:var(--card-background-color,var(--ha-card-background));",
-  "color:var(--primary-text-color);cursor:pointer;font:inherit;line-height:1.25;",
-  "box-shadow:0 2px 9px rgba(0,0,0,.04);box-sizing:border-box;}",
-  ".node:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px;}",
-  ".node ha-icon{--mdc-icon-size:24px;margin-bottom:4px;}",
-  ".solar{left:50%;top:19%;}.solar ha-icon{color:var(--warning-color,#d7a300);}",
-  ".grid{left:18%;top:59%;}.grid ha-icon{color:var(--info-color,#349ad7);}",
-  ".battery{left:82%;top:59%;}.battery ha-icon{color:var(--success-color,#38a57b);}",
-  ".home{left:50%;top:59%;min-height:88px;border-color:var(--primary-color);}",
-  ".home ha-icon{color:var(--primary-color);}",
-  ".node .name{font-size:.75rem;color:var(--secondary-text-color);white-space:nowrap;}",
-  ".node .power{font-size:.99rem;font-weight:700;white-space:nowrap;margin-top:2px;}",
-  ".node .detail{font-size:.68rem;color:var(--secondary-text-color);",
-  "white-space:nowrap;min-height:.9rem;}",
-  ".footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;",
-  "border-top:1px solid var(--divider-color);padding-top:10px;",
-  "font-size:.77rem;color:var(--secondary-text-color);}",
-  ".notice{font-size:.79rem;color:var(--secondary-text-color);text-align:center;",
-  "padding:8px 4px 0;min-height:0;}",
-  ".notice:empty{display:none;}",
-  "@media(max-width:390px){ha-card{padding:12px;}.canvas{height:298px;}",
-  ".node{min-height:74px;padding:5px 3px;border-radius:12px;}",
-  ".node .name{font-size:.68rem;}.node .power{font-size:.88rem;}}",
-  "@media(prefers-reduced-motion:reduce){.flow{animation:none;stroke-dasharray:none;}}",
+  "gap:2px;padding:9px 5px;box-shadow:0 2px 9px rgba(0,0,0,.07);}",
+  ".disc ha-icon{--mdc-icon-size:23px;color:var(--ring);}",
+  ".disc .power{font-size:.97rem;font-weight:700;white-space:nowrap;line-height:1.2;}",
+  ".disc .detail{font-size:.68rem;color:var(--secondary-text-color);white-space:nowrap;",
+  "max-width:100%;overflow:hidden;text-overflow:ellipsis;line-height:1.25;}",
+  ".node .name{position:absolute;left:50%;transform:translateX(-50%);",
+  "top:calc(100% + 6px);font-size:.8rem;color:var(--secondary-text-color);",
+  "white-space:nowrap;font-weight:500;pointer-events:none;}",
+  ".solar .name{top:auto;bottom:calc(100% + 5px);}",
+  ".solar{--ring:var(--ems-solar);left:50%;top:17%;}",
+  ".grid{--ring:var(--ems-grid);left:14%;top:50%;}",
+  ".home{--ring:var(--ems-home);left:86%;top:50%;}",
+  ".battery{--ring:var(--ems-battery);left:50%;top:83%;}",
+  ".node[data-active='false'] .disc{border-color:var(--divider-color,#a1a1a1);}",
+  ".node[data-active='false'] .disc ha-icon{color:var(--secondary-text-color);}",
+  ".node[data-outage='true']{--ring:var(--error-color,#e05c5c);}",
+  ".node[data-outage='true'] .disc{border-width:4px;}",
+  ".node:disabled{cursor:default;}",
+  ".footer{display:flex;flex-wrap:wrap;justify-content:space-between;",
+  "gap:5px 12px;border-top:1px solid var(--divider-color);",
+  "margin:7px 6px 0;padding:10px 2px 0;",
+  "color:var(--secondary-text-color);font-size:.72rem;}",
+  ".note{color:var(--secondary-text-color);font-size:.76rem;text-align:center;",
+  "margin:7px 8px 0;line-height:1.4;}",
+  ".note:empty{display:none;}",
+  "@media(max-width:400px){ha-card{padding:14px 8px;}.canvas{height:318px;}",
+  ".node{width:clamp(72px,24%,96px);}",
+  ".disc .power{font-size:.85rem;}.disc .detail{font-size:.59rem;}",
+  ".disc ha-icon{--mdc-icon-size:21px;}.header{gap:7px;}",
+  ".status{font-size:.69rem;}}",
+  "@media(prefers-reduced-motion:reduce){.dots{animation:none;",
+  "stroke-dasharray:none;stroke-width:2.5;}}",
 ].join("");
 
-const SHELL = [
-  "<style>", STYLES, "</style>",
+const TEMPLATE = [
+  "<style>", CSS, "</style>",
   "<ha-card>",
-  '<div class="head">',
-  '<div id="title" class="title"></div>',
-  '<div id="status" class="status" data-state="unknown" role="status">',
-  '<span class="dot" aria-hidden="true"></span><span id="status-label"></span>',
-  "</div></div>",
-  '<div class="canvas" role="group" aria-label="Power flow">',
-  '<svg class="links" viewBox="0 0 600 322" preserveAspectRatio="none" aria-hidden="true">',
-  '<path class="track" d="M300 60 L300 190"></path>',
-  '<path class="track" d="M104 190 L300 190"></path>',
-  '<path class="track" d="M496 190 L300 190"></path>',
-  '<path id="flow-solar" class="flow off"></path>',
-  '<path id="flow-grid" class="flow off"></path>',
-  '<path id="flow-battery" class="flow off"></path>',
+  '<div class="header"><div class="title" id="title"></div>',
+  '<div class="status" id="status" role="status" data-state="unknown"></div></div>',
+  '<div class="canvas" role="group" aria-label="Energy power flow">',
+  '<svg class="lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">',
+  '<path class="track" id="grid-track" d="M16 50 H84"></path>',
+  '<path class="track" id="solar-track" d="M50 24 V40 Q50 47 60 47 H84"></path>',
+  '<path class="track" id="battery-track" d="M50 76 V60 Q50 53 60 53 H84"></path>',
+  '<path class="dots" id="grid-dots" data-active="false"></path>',
+  '<path class="dots" id="solar-dots" data-active="false"></path>',
+  '<path class="dots" id="battery-dots" data-active="false"></path>',
   "</svg>",
   '<button type="button" class="node solar" data-node="solar">',
-  '<ha-icon icon="mdi:solar-power"></ha-icon>',
-  '<span class="name" data-name="solar"></span>',
+  '<span class="name" data-name="solar"></span><span class="disc">',
+  '<ha-icon data-icon="solar" icon="mdi:solar-power"></ha-icon>',
   '<span class="power" data-power="solar">—</span>',
-  '<span class="detail" data-detail="solar"></span></button>',
+  '<span class="detail" data-detail="solar"></span></span></button>',
   '<button type="button" class="node grid" data-node="grid">',
-  '<ha-icon icon="mdi:transmission-tower"></ha-icon>',
-  '<span class="name" data-name="grid"></span>',
+  '<span class="name" data-name="grid"></span><span class="disc">',
+  '<ha-icon data-icon="grid" icon="mdi:transmission-tower"></ha-icon>',
   '<span class="power" data-power="grid">—</span>',
-  '<span class="detail" data-detail="grid"></span></button>',
-  '<button type="button" class="node battery" data-node="battery">',
-  '<ha-icon icon="mdi:battery"></ha-icon>',
-  '<span class="name" data-name="battery"></span>',
-  '<span class="power" data-power="battery">—</span>',
-  '<span class="detail" data-detail="battery"></span></button>',
+  '<span class="detail" data-detail="grid"></span></span></button>',
   '<button type="button" class="node home" data-node="home">',
-  '<ha-icon icon="mdi:home-lightning-bolt"></ha-icon>',
-  '<span class="name" data-name="home"></span>',
+  '<span class="name" data-name="home"></span><span class="disc">',
+  '<ha-icon data-icon="home" icon="mdi:home-lightning-bolt"></ha-icon>',
   '<span class="power" data-power="home">—</span>',
-  '<span class="detail" data-detail="home"></span></button>',
+  '<span class="detail" data-detail="home"></span></span></button>',
+  '<button type="button" class="node battery" data-node="battery">',
+  '<span class="name" data-name="battery"></span><span class="disc">',
+  '<ha-icon data-icon="battery" icon="mdi:battery"></ha-icon>',
+  '<span class="power" data-power="battery">—</span>',
+  '<span class="detail" data-detail="battery"></span></span></button>',
   "</div>",
-  '<div class="footer"><span id="frequency"></span><span id="inverter"></span></div>',
-  '<div id="notice" class="notice" role="status"></div>',
+  '<div class="footer"><span id="data-source"></span><span id="inverter"></span></div>',
+  '<div class="note" id="note"></div>',
   "</ha-card>",
 ].join("");
 
-class LocalEMSFlowCard extends HTMLElement {
+function secondsPerFlow(watts, minRate = 0.75, maxRate = 6, expected = 2000) {
+  if (!Number.isFinite(watts) || !Number.isFinite(expected) || expected <= 0) {
+    return maxRate;
+  }
+  const minimum = Number.isFinite(minRate) && minRate > 0 ? minRate : 0.75;
+  const maximum = Number.isFinite(maxRate) && maxRate >= minimum ? maxRate : 6;
+  const proportion = Math.max(0, Math.min(1, Math.abs(watts) / expected));
+  return maximum - proportion * (maximum - minimum);
+}
+
+export class LocalEMSFlowCard extends HTMLElement {
   constructor() {
     super();
     this._root = this.attachShadow({ mode: "open" });
-    this._root.innerHTML = SHELL;
-    this._lastModel = null;
+    this._root.innerHTML = TEMPLATE;
     this._config = {};
+    this._lastModel = null;
+    this._prefs = null;
+    this._prefsRequested = false;
+    this._connection = null;
+
     this._root.querySelectorAll("[data-node]").forEach((button) => {
       button.addEventListener("click", () => {
         const source = this._lastModel?.sources?.[button.dataset.node];
         if (typeof source !== "string" || !source) return;
         this.dispatchEvent(new CustomEvent("hass-more-info", {
-          bubbles: true, composed: true, detail: { entityId: source },
+          bubbles: true,
+          composed: true,
+          detail: { entityId: source },
         }));
       });
     });
@@ -172,131 +221,194 @@ class LocalEMSFlowCard extends HTMLElement {
 
   setConfig(config) {
     if (config.entity && (typeof config.entity !== "string" ||
-      !config.entity.startsWith("sensor."))) {
-      throw new Error("Local EMS Flow: entity must be a sensor ID.");
+        !config.entity.startsWith("sensor."))) {
+      throw new Error("Local EMS Flow: entity must be a sensor ID");
+    }
+    if (config.source_mode &&
+        !["energy", "ems"].includes(config.source_mode)) {
+      throw new Error("Local EMS Flow: source_mode must be energy or ems");
     }
     this._config = { ...config };
     this._update();
   }
 
   set hass(hass) {
+    if (this._connection !== hass.connection) {
+      this._connection = hass.connection;
+      this._prefsRequested = false;
+      this._prefs = null;
+    }
     this._hass = hass;
+    if (!this._prefsRequested && typeof hass.callWS === "function") {
+      void this._fetchEnergyPreferences(hass);
+    }
     this._update();
   }
 
-  getCardSize() { return 7; }
+  async _fetchEnergyPreferences(hass) {
+    // Energy is a native component. This call is read-only and per card
+    // instance, never on every fast-changing Home Assistant state event.
+    this._prefsRequested = true;
+    try {
+      this._prefs = await hass.callWS({ type: "energy/get_prefs" });
+    } catch (_error) {
+      this._prefs = null;
+    }
+    if (this._hass?.connection === hass.connection) this._update();
+  }
+
+  getCardSize() { return 8; }
 
   getGridOptions() {
-    return { columns: 6, min_columns: 3, max_columns: 12, rows: 4, min_rows: 3 };
+    return { columns: 6, min_columns: 3, max_columns: 12, rows: 5, min_rows: 4 };
   }
 
   static getStubConfig() { return {}; }
 
-  _t() {
-    return String(this._hass?.language || "de").startsWith("de") ? TEXTS.de : TEXTS.en;
+  _language() {
+    return String(this._hass?.language || "de").startsWith("de") ?
+      TRANSLATIONS.de : TRANSLATIONS.en;
   }
 
-  _selectFlowEntity() {
+  _metadataEntity() {
     const states = this._hass?.states || {};
     if (this._config.entity) return states[this._config.entity] || null;
-    return Object.values(states).find(
-      (st) => st?.entity_id?.startsWith("sensor.") &&
-        st.attributes?.ems_flow_version === 1
-    ) || null;
+    return Object.values(states).find((st) => (
+      st?.entity_id?.startsWith("sensor.") &&
+      st.attributes?.ems_flow_version === 1
+    )) || null;
   }
 
-  _text(selector, text) {
-    const item = this._root.querySelector(selector);
-    if (item) item.textContent = text ?? "";
+  _text(selector, value) {
+    const element = this._root.querySelector(selector);
+    if (element) element.textContent = value ?? "";
   }
 
-  _line(key, active, path, watts) {
-    const elem = this._root.getElementById("flow-" + key);
-    elem.setAttribute("d", path);
-    elem.classList.toggle("off", !active);
+  _flow(name, active, path, watts) {
+    const element = this._root.getElementById(name + "-dots");
+    element.setAttribute("d", path);
+    element.dataset.active = active ? "true" : "false";
     if (active) {
-      const speed = Math.max(0.55, Math.min(3, 2.3 - Math.abs(watts) / 4000));
-      elem.style.animationDuration = speed.toFixed(2) + "s";
-    }
-  }
-
-  _update() {
-    if (!this._hass || !this._root) return;
-    const language = this._t();
-    const locale = this._hass?.locale?.language || this._hass?.language || "de-AT";
-
-    this._text("#title", this._config.title || language.title);
-    const sourceEntity = this._selectFlowEntity();
-    if (!sourceEntity) {
-      this._lastModel = null;
-      this._text("#notice", language.missing);
-      this._text("#status-label", language.unknown);
-      this._reset();
-      return;
-    }
-
-    const model = buildFlowModel(this._hass.states, sourceEntity.attributes);
-    this._lastModel = model;
-    this._text("#notice", sourceEntity.state === "not_configured"
-      ? language.notConfigured : "");
-    this._root.getElementById("status").dataset.state = model.gridState;
-    this._text("#status-label", language[model.gridState] || language.unknown);
-    this._text('[data-name="solar"]', language.solar);
-    this._text('[data-name="grid"]', language.grid);
-    this._text('[data-name="battery"]', language.battery);
-    this._text('[data-name="home"]', language.home);
-
-    this._text('[data-power="solar"]', formatWatts(model.solarW, locale));
-    this._text('[data-power="grid"]', formatWatts(model.gridW, locale));
-    this._text('[data-power="battery"]', formatWatts(model.batteryW, locale));
-    this._text('[data-power="home"]', formatWatts(model.houseW, locale));
-
-    this._text('[data-detail="solar"]',
-      model.solarW !== null ? language[model.directions.solar] : "");
-    this._text('[data-detail="grid"]',
-      model.gridW !== null ? language[model.directions.grid] : "");
-    const btext = model.batteryW !== null
-      ? language[model.directions.battery] : "";
-    const soc = model.batterySoc !== null
-      ? new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(model.batterySoc) + " %" : "";
-    this._text('[data-detail="battery"]', [btext, soc].filter(Boolean).join(" · "));
-    this._text('[data-detail="home"]', "");
-
-    this._line("solar", model.directions.solar === "production",
-      "M300 92 L300 160", model.solarW);
-    this._line("grid", ["import", "export"].includes(model.directions.grid),
-      model.directions.grid === "export"
-        ? "M262 190 L122 190" : "M122 190 L262 190", model.gridW);
-    this._line("battery", ["discharge", "charge"].includes(model.directions.battery),
-      model.directions.battery === "charge"
-        ? "M338 190 L478 190" : "M478 190 L338 190", model.batteryW);
-
-    const freq = model.frequency !== null
-      ? new Intl.NumberFormat(locale, {
-          minimumFractionDigits: 1, maximumFractionDigits: 2,
-        }).format(model.frequency) + " Hz" : "—";
-    this._text("#frequency", language.freq + ": " + freq);
-    this._text("#inverter", model.inverterState
-      ? language.inverter + ": " + model.inverterState : "");
-    for (const node of this._root.querySelectorAll("[data-node]")) {
-      const source = model.sources?.[node.dataset.node];
-      node.disabled = !source;
-      node.title = source || language.notAvailable;
+      element.style.animationDuration = secondsPerFlow(
+        watts, this._config.min_flow_rate, this._config.max_flow_rate,
+        this._config.max_expected_power || 2000
+      ).toFixed(2) + "s";
     }
   }
 
   _reset() {
-    for (const item of this._root.querySelectorAll("[data-power]")) {
-      item.textContent = "—";
+    this._lastModel = null;
+    for (const el of this._root.querySelectorAll("[data-power]")) {
+      el.textContent = "—";
     }
-    for (const item of this._root.querySelectorAll("[data-detail]")) {
-      item.textContent = "";
+    for (const el of this._root.querySelectorAll("[data-detail]")) {
+      el.textContent = "";
     }
-    this._text("#frequency", "");
+    for (const el of this._root.querySelectorAll(".dots")) {
+      el.dataset.active = "false";
+    }
+    for (const el of this._root.querySelectorAll(".track")) {
+      el.dataset.visible = "true";
+    }
+    this._root.getElementById("status").dataset.state = "unknown";
+    this._root.querySelector('[data-icon="grid"]').setAttribute(
+      "icon", "mdi:transmission-tower"
+    );
     this._text("#inverter", "");
-    for (const elem of this._root.querySelectorAll(".flow")) {
-      elem.classList.add("off");
+    this._text("#data-source", "");
+  }
+
+  _update() {
+    if (!this._hass || !this._root) return;
+    const t = this._language();
+    const locale = this._hass.locale?.language || this._hass.language || "de-AT";
+    const showZeroLines = this._config.display_zero_lines !== false;
+    this._text("#title", this._config.title || t.title);
+
+    const metadata = this._metadataEntity();
+    if (!metadata) {
+      this._reset();
+      this._text("#status", t.unknown);
+      this._text("#note", t.missing);
+      return;
     }
+
+    const model = buildFlowModel(
+      this._hass.states, metadata.attributes, this._prefs, this._config
+    );
+    this._lastModel = model;
+    this._text("#status", t[model.gridState] || t.unknown);
+    this._root.getElementById("status").dataset.state = model.gridState;
+    this._text("#note", model.sourcesConfigured ? "" : t.noSources);
+    this._text("#data-source", model.sourceMode === "energy" ?
+      t.sourceEnergy : t.sourceEms);
+
+    const outage = ["eps", "grid_lost"].includes(model.gridState) ||
+      model.gridContact === false;
+    const gridNode = this._root.querySelector(".node.grid");
+    gridNode.dataset.outage = outage ? "true" : "false";
+    this._root.querySelector('[data-icon="grid"]').setAttribute(
+      "icon", outage ? "mdi:transmission-tower-off" : "mdi:transmission-tower"
+    );
+
+    const data = {
+      solar: { watts: model.solarW, detail: model.directions.solar },
+      grid: { watts: model.gridW, detail: model.directions.grid },
+      home: { watts: model.houseW, detail: null },
+      battery: { watts: model.batteryW, detail: model.directions.battery },
+    };
+
+    for (const name of Object.keys(data)) {
+      const node = this._root.querySelector(".node." + name);
+      const item = data[name];
+      this._text('[data-name="' + name + '"]', t[name]);
+      this._text('[data-power="' + name + '"]', formatWatts(item.watts, locale));
+      node.dataset.active = item.watts !== null ? "true" : "false";
+      node.disabled = !model.sources?.[name];
+      node.title = model.sources?.[name] || t.invalid;
+      let detail = item.detail ? (t[item.detail] || "") : "";
+      if (name === "battery" && model.batterySoc !== null) {
+        const soc = new Intl.NumberFormat(locale, {
+          maximumFractionDigits: 0,
+        }).format(model.batterySoc) + " %";
+        detail = [soc, detail].filter(Boolean).join(" · ");
+      }
+      if (name === "grid" && model.frequency !== null) {
+        detail = new Intl.NumberFormat(locale, {
+          minimumFractionDigits: 1, maximumFractionDigits: 2,
+        }).format(model.frequency) + " Hz";
+      }
+      if (name === "home" && model.inverterState) {
+        detail = model.inverterState;
+      }
+      this._text('[data-detail="' + name + '"]', detail);
+      const detailEl = this._root.querySelector('[data-detail="' + name + '"]');
+      if (detailEl) detailEl.title = detail;
+    }
+
+    const moving = {
+      solar: model.directions.solar === "production",
+      grid: ["import", "export"].includes(model.directions.grid),
+      battery: ["discharge", "charge"].includes(model.directions.battery),
+    };
+    for (const name of Object.keys(moving)) {
+      this._root.getElementById(name + "-track").dataset.visible =
+        showZeroLines || moving[name] ? "true" : "false";
+    }
+    this._flow("solar", moving.solar, PATHS.solar, model.solarW);
+    this._flow(
+      "grid", moving.grid,
+      model.directions.grid === "export" ? PATHS.gridReverse : PATHS.grid,
+      model.gridW
+    );
+    this._flow(
+      "battery", moving.battery,
+      model.directions.battery === "charge" ?
+        PATHS.batteryReverse : PATHS.battery,
+      model.batteryW
+    );
+    this._text("#inverter", model.inverterState ?
+      t.inverter + ": " + model.inverterState : "");
   }
 }
 
@@ -304,14 +416,13 @@ if (typeof customElements !== "undefined" &&
     !customElements.get("local-ems-flow-card")) {
   customElements.define("local-ems-flow-card", LocalEMSFlowCard);
 }
-
 if (typeof window !== "undefined") {
   window.customCards = window.customCards || [];
-  if (!window.customCards.some((card) => card.type === "local-ems-flow-card")) {
+  if (!window.customCards.some((entry) => entry.type === "local-ems-flow-card")) {
     window.customCards.push({
       type: "local-ems-flow-card",
-      name: "Local EMS Energy Flow",
-      description: "Grid, PV, battery and home power from the Local EMS integration",
+      name: "Local EMS Power Flow",
+      description: "Round, animated power flow from Energy Dashboard and Local EMS",
       preview: false,
     });
   }

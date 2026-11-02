@@ -11,6 +11,13 @@
  *  - PV and house load: nonnegative.
  */
 
+import {
+  energyPowerMappings,
+  powerFromMappings,
+  primaryEntity,
+  percentageFromMappings,
+} from "./energy-preferences.mjs";
+
 const UNKNOWN = new Set(["unknown", "unavailable", "none", ""]);
 
 function numericState(states, entityId, allowedUnits) {
@@ -46,22 +53,54 @@ function rawState(states, entityId) {
   return UNKNOWN.has(raw.toLowerCase()) ? null : raw;
 }
 
-export function buildFlowModel(states, attributes) {
+export function buildFlowModel(states, attributes, preferences = null, options = {}) {
   const attrs = attributes ?? {};
-  const sources = attrs.source_entities ?? {};
+  const explicit = attrs.source_entities ?? {};
+  const mappings = energyPowerMappings(preferences);
+  // Energy Dashboard is authoritative by default, unless deliberately
+  // overridden by source_mode: ems in this card's config.
+  const preferEnergy = options.source_mode !== "ems";
+  const sourceEntities = {};
 
-  const gridW = toWatts(states, sources.grid, !!attrs.invert_grid_power);
-  const pvValue = toWatts(states, sources.solar);
-  const solarW = pvValue === null ? null : Math.max(0, pvValue);
-  const batteryW = toWatts(states, sources.battery, !!attrs.invert_battery_power);
-  const houseValue = toWatts(states, sources.home);
-  const houseW = houseValue === null ? null : Math.max(0, houseValue);
-  const batterySoc = toPercent(states, sources.battery_soc);
-  const frequency = toHertz(states, sources.grid_frequency);
-  const inverterState = rawState(states, sources.inverter_state);
+  function power(role, mappedName, invert = false) {
+    const mappingList = mappings[role];
+    const entity = explicit[mappedName];
+    const hasEnergy = mappingList.length > 0;
+    const useEnergy = (preferEnergy && hasEnergy) || (!entity && hasEnergy);
+    if (useEnergy) {
+      sourceEntities[role] = primaryEntity(mappingList);
+      return powerFromMappings(
+        mappingList,
+        (id) => toWatts(states, id),
+        (id) => !!states?.[id],
+      );
+    }
+    sourceEntities[role] = entity || null;
+    return toWatts(states, entity, invert);
+  }
+
+  const gridW = power("grid", "grid", !!attrs.invert_grid_power);
+  const pvValue = power("solar", "solar");
+  const solarW = pvValue === null || pvValue < 0 ? null : pvValue;
+  const batteryW = power("battery", "battery", !!attrs.invert_battery_power);
+  const houseValue = power("home", "home");
+  const houseW = houseValue === null || houseValue < 0 ? null : houseValue;
+  const hasEnergySoc = mappings.soc.length > 0;
+  const useEnergySoc = (preferEnergy && hasEnergySoc) ||
+    (!explicit.battery_soc && hasEnergySoc);
+  const batterySoc = useEnergySoc
+    ? percentageFromMappings(mappings.soc, (id) => toPercent(states, id))
+    : toPercent(states, explicit.battery_soc);
+  sourceEntities.battery_soc = useEnergySoc
+    ? mappings.soc[0]?.entity || null : explicit.battery_soc || null;
+  const frequency = toHertz(states, explicit.grid_frequency);
+  const inverterState = rawState(states, explicit.inverter_state);
+  sourceEntities.grid_frequency = explicit.grid_frequency || null;
+  sourceEntities.grid_contact = explicit.grid_contact || null;
+  sourceEntities.inverter_state = explicit.inverter_state || null;
 
   let gridContact = null;
-  const contactRaw = rawState(states, sources.grid_contact);
+  const contactRaw = rawState(states, explicit.grid_contact);
   if (contactRaw === "on" || contactRaw === "off") {
     gridContact = (contactRaw === "on") === !!attrs.grid_contact_on_is_present;
   }
@@ -72,12 +111,21 @@ export function buildFlowModel(states, attributes) {
     "unknown", "unconfigured",
   ].includes(safety) ? safety : "unknown";
 
+  const isEnergyMapped = ["grid", "solar", "home", "battery"].some(
+    (key) => mappings[key].length > 0
+  );
+
   return {
-    sources, gridW, solarW, batteryW, houseW,
+    sources: sourceEntities, gridW, solarW, batteryW, houseW,
     batterySoc, frequency, inverterState, gridContact,
     gridState: status,
     safetyReason: attrs.grid_safety_reason || null,
     controlAllowed: attrs.control_allowed === true,
+    sourcesConfigured: !!(
+      isEnergyMapped ||
+      ["grid", "solar", "home", "battery"].some((key) => explicit[key])
+    ),
+    sourceMode: preferEnergy && isEnergyMapped ? "energy" : "ems",
     directions: {
       grid: gridW === null ? null : (
         Math.abs(gridW) < 5 ? "idle" : gridW > 0 ? "import" : "export"
