@@ -304,11 +304,29 @@ test("responsive circles stay aligned with the energy-flow topology", async () =
     "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
   ), "utf8");
   for (const text of [
-    "left:16%;top:50%", "left:84%;top:50%",
+    "left:max(42px,16%);top:50%", "left:min(calc(100% - 42px),84%);top:50%",
     "left:50%;top:24%", "left:50%;top:74%",
     "min-width:0;position:relative",
     "formatEntityState",
   ]) {
     assert.ok(card.includes(text), text);
   }
+});
+
+
+test("all power-flow circles use the PFCP-sized fixed 80px diameter", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const { resolve } = await import("node:path");
+  const source = readFileSync(resolve(
+    fileURLToPath(new URL(".", import.meta.url)),
+    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
+  ), "utf8");
+  assert.match(source, /--ems-bubble-diameter:80px/);
+  assert.match(source, /width:var\(--ems-bubble-diameter\);height:var\(--ems-bubble-diameter\)/);
+  assert.doesNotMatch(source, /width:clamp\(72px/);
+  // A fixed circle must still fit inside a narrower dashboard section.
+  assert.match(source, /left:max\(42px,16%\)/);
+  assert.match(source, /left:min\(calc\(100% - 42px\),84%\)/);
+  assert.match(source, /"\.disc\{box-sizing:border-box;width:100%;height:100%;aspect-ratio:1;"/);
 });

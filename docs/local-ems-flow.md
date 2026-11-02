@@ -185,3 +185,20 @@ Falls die bisherige PFCP-Karte Netzfrequenz zeigt, unsere Local-EMS-Karte
 aber nicht, in **Local EMS → Konfigurieren → Energie-Messwerte**
 `sensor.hyd20ktl_3p_netzfrequenz` dem Feld **Netzfrequenz** zuordnen.
 Dieser Zusatzwert gehört nicht zu den üblichen Energy-Dashboard-Prefs.
+
+## Feste Kreisgröße wie Power Flow Card Plus (ab 0.4.0b4)
+
+Die vier Leistungsknoten **Netz, Haus, PV und Batterie** haben jetzt einen
+einheitlichen, festen Durchmesser von **80 CSS-Pixeln**. Das entspricht
+ungefähr der Kreisgröße in der auf dem Dashboard verglichenen Power Flow
+Card Plus. Die Kreise wachsen nicht mehr mit der Karten- bzw.
+Sections-Spaltenbreite (vorher `clamp(72px,23%,116px)`).
+
+Die Kreismittelpunkte bleiben relativ zum verfügbaren Kartenbereich
+angeordnet; bei besonders schmalen Karten begrenzen `max()/min()`
+den Abstand zum seitlichen Rand, damit 80-Pixel-Kreise nicht abgeschnitten
+werden. Die Texte im Inneren bleiben platzsparend; lange Statuswerte
+werden weiterhin bei Bedarf gekürzt und zusätzlich unterhalb ausgegeben.
+
+Die Änderung betrifft **nur das Dashboard**. Die EMS-Datenquellen,
+Netz-/EPS-Sicherheitslogik und alle Verbraucher bleiben unverändert.
