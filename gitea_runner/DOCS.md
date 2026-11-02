@@ -51,6 +51,12 @@ Nach einer erfolgreichen Erstregistrierung kann `registration_token` in der Home
 
 Wenn die konfigurierte Gitea-Instanz nach einer Registrierung geaendert wird, startet die App absichtlich nicht weiter. Dadurch wird vermieden, dass eine bestehende Runner-Identitaet versehentlich gegen eine andere Instanz verwendet wird.
 
+## Schutz gegen versehentliches Token-Logging
+
+Vor dem Start von `tini` und `gitea-runner` entfernt `clean-env.sh` alle geerbten Umgebungsvariablen außer `PATH`, `HOME=/data` und `TZ`. Insbesondere erreichen die von Home Assistant injizierten `SUPERVISOR_TOKEN` und `HASSIO_TOKEN` keine Host-Mode-Jobprozesse. Dieser Schutz erfasst auch unerwartete künftige Variablen und verhindert unbeabsichtigte Lecks über Build-Tracebacks bzw. `os.environ`.
+
+**Sicherheitsgrenze:** Der Runner ist weiterhin ein Host-Mode-Runner. Vertrauenswürdige Workflows können andere Credentials, etwa ihre ausdrücklich bereitgestellten CI-Secrets, selbst ausgeben oder lokale Runner-Registrierungsdaten lesen. Eine absolute Garantie gegen Secrets in beliebigen Logs besteht nicht. Nur vertrauenswürdige Repositories/Workflows zuweisen; für fremden Code getrennte, isolierte Runner verwenden. Bereits im alten Joblog veröffentlichte Supervisor-Tokens werden durch dieses Update **nicht** widerrufen: Tokens/Log-Zugriff unabhängig prüfen und Berechtigungen entziehen bzw. rotieren.
+
 ## Sicherheitsmodell
 
 Host-Mode bedeutet: Workflow-Schritte laufen direkt **innerhalb des Runner-App-Containers**. Sie laufen nicht auf dem Home-Assistant-Host.
@@ -69,7 +75,7 @@ Fuer Workflows, die Docker-Container, Service-Container oder `docker://` Actions
 
 ## Runtime
 
-- Home Assistant app: `5.0.0-rch2`
+- Home Assistant app: `5.0.0-rch3`
 - Gitea Runner: `5.0.0`
 - Python: `3.x` (Alpine package)
 - Upstream image: `docker.io/gitea/runner:5.0.0`
