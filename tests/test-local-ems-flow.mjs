@@ -430,7 +430,7 @@ test("unknown sensor data never creates fictitious direct power flows", () => {
     };
     config[missing] = null;
     assert.deepEqual(inferDirectFlows(config), {
-      gridToBatteryW: 0, solarToGridW: 0,
+      gridToBatteryW: 0, solarToGridW: 0, solarToBatteryW: 0,
     }, missing);
   }
 });
