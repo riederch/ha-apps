@@ -518,12 +518,12 @@ test("bundled original PFCP is pinned, namespaced and licensed", () => {
   const root = fileURLToPath(new URL(".", import.meta.url));
   const base = "../custom_components/local_ems/frontend/";
   const js = readFileSync(resolve(root, base +
-    "vendor/power-flow-card-plus-v0.3.7.mjs"), "utf8");
+    "vendor/power-flow-card-plus-v0.4.0-beta.1.mjs"), "utf8");
   const license = readFileSync(resolve(root, base + "vendor/LICENSE-PFCP"), "utf8");
-  assert.match(js, /Power Flow Card Plus v0\.3\.7/);
-  assert.ok(js.includes('da("local-ems-pfcp-upstream")'));
-  assert.ok(js.includes('"local-ems-pfcp-upstream-editor"'));
-  assert.ok(!js.includes('da("power-flow-card-plus")'));
+  assert.match(js, /Power Flow Card Plus original distribution: v0\.4\.0-beta\.1/);
+  assert.ok(js.includes('Ca("local-ems-pfcp-upstream")'));
+  assert.ok(js.includes('Ca("local-ems-pfcp-upstream-editor")'));
+  assert.ok(!js.includes('Ca("power-flow-card-plus")'));
   assert.match(js, /export\{[A-Za-z_$]+ as PowerFlowCardPlus\}/);
   assert.match(license, /MIT License/);
   assert.match(license, /Copyright \(c\) 2023-2026 flixlix/);
@@ -537,10 +537,26 @@ test("wrapper serves original renderer and solver, not a custom SVG clone", () =
   const backend = readFileSync(resolve(root, "../custom_components/local_ems/frontend.py"), "utf8");
   const manifest = JSON.parse(readFileSync(resolve(root,
     "../custom_components/local_ems/manifest.json"), "utf8"));
-  assert.ok(js.includes('power-flow-card-plus-v0.3.7.mjs?v=' + manifest.version));
+  assert.ok(js.includes('power-flow-card-plus-v0.4.0-beta.1.mjs?v=' + manifest.version));
   assert.ok(js.includes('pfcp-adapter.mjs?v=' + manifest.version));
   assert.ok(backend.includes('CARD_VERSION = "' + manifest.version + '"'));
   assert.ok(js.includes("Original.getConfigElement()"));
   assert.ok(!js.includes('const PATHS = {'));
   assert.ok(!js.includes('"solar-grid":'));
+});
+
+
+test("current original bundle 0.4.0-beta.1 preserves upstream provenance", () => {
+  const root = fileURLToPath(new URL(".", import.meta.url));
+  const path = "../custom_components/local_ems/frontend/vendor/";
+  const js = readFileSync(resolve(root, path +
+    "power-flow-card-plus-v0.4.0-beta.1.mjs"), "utf8");
+  assert.ok(js.includes("d9f3a9255776b3e1a270bf72b2c8039e22047104"));
+  assert.ok(js.includes('version:"0.4.0-beta.1"'));
+  assert.ok(js.includes("https://github.com/flixlix/power-flow-card-plus/releases/"));
+  assert.ok(js.includes('Ca("local-ems-pfcp-upstream")'));
+  assert.ok(js.includes('Ca("local-ems-pfcp-upstream-editor")'));
+  assert.ok(!js.includes('Ca("power-flow-card-plus")'));
+  assert.ok(!js.includes('Ca("power-flow-card-plus-editor")'));
+  assert.ok(js.includes('querySelector("#local-ems-pfcp-upstream")'));
 });

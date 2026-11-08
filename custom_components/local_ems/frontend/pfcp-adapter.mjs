@@ -6,7 +6,7 @@
  * This is a UI adapter: synthetic sensor states are never registered in HA,
  * never recorded, and never used for control, load shedding or EPS safety.
  */
-import { buildFlowModel } from "./flow-model.mjs";
+import { buildFlowModel } from "./flow-model.mjs?v=0.5.0b5";
 
 export const VIRTUAL = Object.freeze({
   grid: "sensor.local_ems_ui_pfcp_grid",

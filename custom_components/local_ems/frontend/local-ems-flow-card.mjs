@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /**
- * Local EMS wrapper for original Power Flow Card Plus v0.3.7 (MIT).
+ * Local EMS wrapper for original Power Flow Card Plus v0.4.0-beta.1 (MIT).
  *
  * PFCP supplies the complete upstream renderer, UI styles, power-flow
  * allocator, animations, interactions and optional UI editor. This wrapper
@@ -12,7 +12,7 @@ import { buildUpstreamBridge, LOCAL_CARD_TYPE, UPSTREAM_ELEMENT,
   UPSTREAM_CARD_TYPE } from "./pfcp-adapter.mjs?v=0.5.0b5";
 import "./local-ems-peak-gauge-card.mjs";
 
-const VENDOR_MODULE = "./vendor/power-flow-card-plus-v0.3.7.mjs?v=0.5.0b5";
+const VENDOR_MODULE = "./vendor/power-flow-card-plus-v0.4.0-beta.1.mjs?v=0.5.0b5";
 let vendorPromise;
 
 async function loadVendor() {
