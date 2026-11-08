@@ -429,7 +429,52 @@ test("card exposes both additional physical path tracks and directional animatio
     assert.match(source, new RegExp('id="' + path + '-dots"'));
     assert.ok(source.includes('this._flow(\n      "' + path + '"'));
   }
-  assert.ok(source.includes('"solar-grid": model.directFlows.solarToGridW >= 5'));
-  assert.ok(source.includes('"grid-battery": model.directFlows.gridToBatteryW >= 5'));
+  assert.ok(source.includes('"solar-grid": directFlows.solarToGridW >= 5'));
+  assert.ok(source.includes('"grid-battery": directFlows.gridToBatteryW >= 5'));
   assert.match(source, /showZeroLines \|\| moving\[name\]/);
+});
+
+
+test("regression: cached old flow-model without directFlows does not crash card", async () => {
+  globalThis.HTMLElement ??= class {};
+  const { safeDirectFlows } = await import(
+    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
+  );
+  const legacy = {
+    gridW: 2400, solarW: 500, batteryW: -2000,
+    directions: { solar: "production", grid: "import", battery: "charge" },
+    // Pre-v0.5.0b2 model has no directFlows.
+  };
+  assert.deepEqual(safeDirectFlows(legacy), {
+    solarToGridW: 0,
+    gridToBatteryW: 0,
+  });
+  assert.deepEqual(safeDirectFlows({ directFlows: null }), {
+    solarToGridW: 0,
+    gridToBatteryW: 0,
+  });
+  assert.deepEqual(safeDirectFlows({
+    directFlows: { solarToGridW: "120", gridToBatteryW: NaN },
+  }), { solarToGridW: 0, gridToBatteryW: 0 });
+  assert.deepEqual(safeDirectFlows({
+    directFlows: { solarToGridW: 1300, gridToBatteryW: 400 },
+  }), { solarToGridW: 1300, gridToBatteryW: 400 });
+});
+
+test("nested flow-model ESM import is cache-busted with manifest version", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const { resolve } = await import("node:path");
+  const directory = fileURLToPath(new URL(".", import.meta.url));
+  const manifest = JSON.parse(readFileSync(resolve(directory,
+    "../custom_components/local_ems/manifest.json"), "utf8"));
+  const version = manifest.version;
+  const code = readFileSync(resolve(directory,
+    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"), "utf8");
+  const backend = readFileSync(resolve(directory,
+    "../custom_components/local_ems/frontend.py"), "utf8");
+  // Merely cache-busting the top-level Lovelace resource is insufficient!
+  assert.ok(code.includes('from "./flow-model.mjs?v=' + version + '";'));
+  assert.ok(backend.includes('CARD_VERSION = "' + version + '"'));
+  assert.ok(code.includes("const directFlows = safeDirectFlows(model)"));
 });

@@ -248,3 +248,28 @@ Diese Ableitungen dienen ausschließlich der Visualisierung, nicht der
 Nach HACS-Update auf 0.5.0b2 und Home-Assistant-Neustart wird die
 JavaScript-Ressource auf
 `/local_ems/local-ems-flow-card.mjs?v=0.5.0b2` aktualisiert.
+
+## Absturzschutz beim Update auf 0.5.0b3
+
+In Version 0.5.0b2 konnte Home Assistant im Chrome-Browser bereits die
+**aktualisierte Hauptkarte** mit neuen Solar→Netz- und Netz→Batterie-Pfaden
+laden, während das unveränderte Importziel `flow-model.mjs` noch aus
+dem Browser-ESM-Cache stammte. Das alte Modell enthielt kein
+`directFlows`, was zu
+`Cannot read properties of undefined (reading 'solarToGridW')` führte.
+
+Der Fix hat zwei Ebenen:
+
+1. Die Karte verwendet für `flow-model.mjs` nun einen
+   **versionierten Modulimport** (`?v=0.5.0b3`). Damit lädt der
+   Browser beim Versionswechsel auch die geänderte Unterdatei.
+2. Das Modell wird defensiv verarbeitet: Fehlt `directFlows`
+   oder ein gültiger Zahlenwert, bleiben die beiden neuen
+   Animationen aus, während die restliche Karte normal weiterläuft.
+
+Die zentralen Netzmessungen, der 15-Minuten-Gauge und die
+EPS-Sicherheitslogik bleiben davon unberührt.
+
+**Aktualisierung:** Local EMS in HACS auf 0.5.0b3 aktualisieren,
+Home Assistant neu starten und die Dashboard-Seite im Browser bzw.
+der Companion-App vollständig neu laden.
