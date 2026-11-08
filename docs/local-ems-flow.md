@@ -218,9 +218,9 @@ Beide Verbindungen nutzen die vorhandenen Netz-, Solar- und Batterie-
 Leistungssensoren. Es sind **keine zusätzlichen Home-Assistant-Entitäten**
 und **keine YAML-Einstellungen** erforderlich:
 
-\`\`\`yaml
+```yaml
 type: custom:local-ems-flow-card
-\`\`\`
+```
 
 ### Physikalische Aussage und Grenzen
 
@@ -230,14 +230,14 @@ eindeutig nachweisen, welcher Erzeuger welchen Verbraucher versorgt.
 Daher berechnet die Karte für die neuen direkten Verbindungen **nur die
 garantierten Mindestanteile**:
 
-* \`grid_to_battery_min = min(max(grid_import,0), max(battery_charge - pv,0))\`
-* \`solar_to_grid_min = min(max(pv,0), max(grid_export - battery_discharge,0))\`
+* `grid_to_battery_min = min(max(grid_import,0), max(battery_charge - pv,0))`
+* `solar_to_grid_min = min(max(pv,0), max(grid_export - battery_discharge,0))`
 
 Die Animation läuft nur bei mindestens 5 W zuordenbarem Mindestanteil.
-Sind alle drei Leistungsquellen nicht verfügbar, gibt es keine Zuordnung.
+Fehlt eine der drei Leistungsquellen, gibt es keine verlässliche Zuordnung.
 Bei bestätigtem Netzausfall, EPS oder negativem Netzkontakt werden
 Netzverbindungen nicht animiert. Die grauen Pfade bleiben mit dem
-üblichen \`display_zero_lines: true\` sichtbar.
+üblichen `display_zero_lines: true` sichtbar.
 
 **Wichtig:** Keine Animation heißt hier nicht, dass tatsächlich kein Strom
 über diese Verbindung fließt: Bei gemischter PV- und Netzversorgung lässt
@@ -247,4 +247,4 @@ Diese Ableitungen dienen ausschließlich der Visualisierung, nicht der
 
 Nach HACS-Update auf 0.5.0b2 und Home-Assistant-Neustart wird die
 JavaScript-Ressource auf
-\`/local_ems/local-ems-flow-card.mjs?v=0.5.0b2\` aktualisiert.
+`/local_ems/local-ems-flow-card.mjs?v=0.5.0b2` aktualisiert.

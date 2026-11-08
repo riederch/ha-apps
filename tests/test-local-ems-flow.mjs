@@ -427,7 +427,7 @@ test("card exposes both additional physical path tracks and directional animatio
   for (const path of ["solar-grid", "grid-battery"]) {
     assert.match(source, new RegExp('id="' + path + '-track"'));
     assert.match(source, new RegExp('id="' + path + '-dots"'));
-    assert.ok(source.includes('this._flow(\\n      "' + path + '"'));
+    assert.ok(source.includes('this._flow(\n      "' + path + '"'));
   }
   assert.ok(source.includes('"solar-grid": model.directFlows.solarToGridW >= 5'));
   assert.ok(source.includes('"grid-battery": model.directFlows.gridToBatteryW >= 5'));
