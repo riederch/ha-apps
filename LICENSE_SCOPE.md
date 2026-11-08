@@ -36,3 +36,14 @@ repository does not by itself change the license of each program.
 
 This file clarifies the intended licensing scope; it does not modify the
 text of the GNU GPL or grant rights in software owned by third parties.
+
+## Embedded Power Flow Card Plus
+
+The file `custom_components/local_ems/frontend/vendor/power-flow-card-plus-v0.4.0-beta.1.mjs`
+contains third-party code from Power Flow Card Plus and retains its original
+**MIT license**, Copyright (c) 2023-2026 flixlix. The bundled original
+is not relicensed under the root GPL-3.0-or-later license.
+The full original MIT text is in `custom_components/local_ems/frontend/vendor/LICENSE-PFCP`.
+The upstream commit and changes are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Our independently written wrapper (`local-ems-flow-card.mjs`),
+adapter (`pfcp-adapter.mjs`), and Local EMS backend remain GPL-3.0-or-later.
