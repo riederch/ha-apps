@@ -7,7 +7,7 @@
  */
 // Version the *imported* module, not just the Lovelace entry point. Chrome
 // otherwise reuses an older flow-model.mjs after upgrading the top-level card.
-import { buildFlowModel, formatWatts } from "./flow-model.mjs?v=0.5.0b3";
+import { buildFlowModel, formatWatts } from "./flow-model.mjs?v=0.5.0b4";
 // Both Local EMS cards are shipped through the same Lovelace JS resource.
 import "./local-ems-peak-gauge-card.mjs";
 
@@ -77,6 +77,8 @@ const PATHS = {
   // energy-balance inference confirms a minimum transfer.
   solarGrid: "M50 24 V40 Q50 47 40 47 H16",
   gridBattery: "M16 50 H40 Q50 53 50 60 V74",
+  // PV to battery: a vertical direct link inside the four-node diamond.
+  solarBattery: "M50 24 V74",
 };
 
 // Percent-based paths keep the same power-flow topology on phones, tablets,
@@ -106,7 +108,7 @@ const CSS = [
   ".track[data-visible='false']{visibility:hidden;}",
   ".dots{stroke-width:5;stroke-dasharray:1 20;animation:power-dots 1.4s linear infinite;}",
   ".dots[data-active='false']{visibility:hidden;animation:none;}",
-  "#solar-dots,#solar-grid-dots{stroke:var(--ems-solar);}",
+  "#solar-dots,#solar-grid-dots,#solar-battery-dots{stroke:var(--ems-solar);}",
   "#grid-dots,#grid-battery-dots{stroke:var(--ems-grid);}",
   "#battery-dots{stroke:var(--ems-battery);}",
   "@keyframes power-dots{from{stroke-dashoffset:0;}to{stroke-dashoffset:-84;}}",
@@ -167,11 +169,13 @@ const TEMPLATE = [
   '<path class="track" id="battery-track" d="M50 76 V60 Q50 53 60 53 H84"></path>',
   '<path class="track" id="solar-grid-track" d="M50 24 V40 Q50 47 40 47 H16"></path>',
   '<path class="track" id="grid-battery-track" d="M16 50 H40 Q50 53 50 60 V74"></path>',
+  '<path class="track" id="solar-battery-track" d="M50 24 V74"></path>',
   '<path class="dots" id="grid-dots" data-active="false"></path>',
   '<path class="dots" id="solar-dots" data-active="false"></path>',
   '<path class="dots" id="battery-dots" data-active="false"></path>',
   '<path class="dots" id="solar-grid-dots" data-active="false"></path>',
   '<path class="dots" id="grid-battery-dots" data-active="false"></path>',
+  '<path class="dots" id="solar-battery-dots" data-active="false"></path>',
   "</svg>",
   '<button type="button" class="node solar" data-node="solar">',
   '<span class="name" data-name="solar"></span><span class="disc">',
@@ -211,6 +215,7 @@ export function safeDirectFlows(model) {
   return {
     solarToGridW: valid(flows?.solarToGridW),
     gridToBatteryW: valid(flows?.gridToBatteryW),
+    solarToBatteryW: valid(flows?.solarToBatteryW),
   };
 }
 
@@ -444,6 +449,7 @@ export class LocalEMSFlowCard extends HTMLElement {
       battery: ["discharge", "charge"].includes(model.directions.battery),
       "solar-grid": directFlows.solarToGridW >= 5,
       "grid-battery": directFlows.gridToBatteryW >= 5,
+      "solar-battery": directFlows.solarToBatteryW >= 5,
     };
     for (const name of Object.keys(moving)) {
       this._root.getElementById(name + "-track").dataset.visible =
@@ -457,6 +463,10 @@ export class LocalEMSFlowCard extends HTMLElement {
     this._flow(
       "grid-battery", moving["grid-battery"], PATHS.gridBattery,
       directFlows.gridToBatteryW
+    );
+    this._flow(
+      "solar-battery", moving["solar-battery"], PATHS.solarBattery,
+      directFlows.solarToBatteryW
     );
     this._flow(
       "grid", moving.grid,

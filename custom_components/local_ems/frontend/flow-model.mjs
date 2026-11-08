@@ -54,7 +54,7 @@ function rawState(states, entityId) {
 }
 
 /**
- * Conservative *minimum* allocations for the two direct grid/solar links.
+ * Conservative *minimum* allocations for direct energy-flow links.
  * A power-flow display cannot identify the physical source of charging or
  * export from bus totals alone. So a link animates only if part of the transfer
  * is forced by conservation of energy, even under the most conservative
@@ -62,7 +62,12 @@ function rawState(states, entityId) {
  *
  * grid -> battery: charging beyond all available PV must use imported power.
  * solar -> grid: export beyond all battery discharge must involve PV.
- * Both require valid power sensors and an electrically available grid.
+ * solar -> battery: charging beyond the available grid import must use PV.
+ * A dedicated PV -> battery power sensor does not exist, so this is only a
+ * lower bound, not an exact physical attribution.
+ * Direct-route inference requires valid PV, grid and battery power values
+ * and an available grid. During EPS, a generator may be an unmetered source,
+ * so the conservative estimate is zero rather than inventing an origin.
  * The result is not a per-path meter and must never be used for actuation.
  */
 export function inferDirectFlows({ gridW, solarW, batteryW, gridState, gridContact }) {
@@ -71,7 +76,7 @@ export function inferDirectFlows({ gridW, solarW, batteryW, gridState, gridConta
   const complete = [gridW, solarW, batteryW].every(Number.isFinite) &&
     solarW >= 0;
   if (gridUnavailable || !complete) {
-    return { gridToBatteryW: 0, solarToGridW: 0 };
+    return { gridToBatteryW: 0, solarToGridW: 0, solarToBatteryW: 0 };
   }
   const importW = Math.max(0, gridW);
   const exportW = Math.max(0, -gridW);
@@ -80,6 +85,7 @@ export function inferDirectFlows({ gridW, solarW, batteryW, gridState, gridConta
   return {
     gridToBatteryW: Math.min(importW, Math.max(0, chargeW - solarW)),
     solarToGridW: Math.min(solarW, Math.max(0, exportW - dischargeW)),
+    solarToBatteryW: Math.min(solarW, Math.max(0, chargeW - importW)),
   };
 }
 
