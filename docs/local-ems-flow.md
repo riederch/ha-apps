@@ -202,3 +202,49 @@ werden weiterhin bei Bedarf gekürzt und zusätzlich unterhalb ausgegeben.
 
 Die Änderung betrifft **nur das Dashboard**. Die EMS-Datenquellen,
 Netz-/EPS-Sicherheitslogik und alle Verbraucher bleiben unverändert.
+
+
+## Direkte Netz-/Batterie- und PV-/Netz-Verbindungen (ab 0.5.0b2)
+
+Die Karte enthält zusätzlich zu den bisherigen drei Verbindungen zwei
+linksseitige, geschwungene Pfade:
+
+* **Netz → Batterie:** Netzstrom, der für die aktuelle Batterieladung
+  zwingend erforderlich ist. Die Animation läuft von links nach unten.
+* **Solar → Netz:** PV-Erzeugung, die zwingend zur aktuellen Netzeinspeisung
+  beiträgt. Die Animation läuft von oben nach links.
+
+Beide Verbindungen nutzen die vorhandenen Netz-, Solar- und Batterie-
+Leistungssensoren. Es sind **keine zusätzlichen Home-Assistant-Entitäten**
+und **keine YAML-Einstellungen** erforderlich:
+
+```yaml
+type: custom:local-ems-flow-card
+```
+
+### Physikalische Aussage und Grenzen
+
+Ein AC-Bus hat keine originären Messwerte für die paarweisen Energieflüsse.
+Aus Netz-, PV-, Batterie- und Hausleistungsmessungen lässt sich nicht
+eindeutig nachweisen, welcher Erzeuger welchen Verbraucher versorgt.
+Daher berechnet die Karte für die neuen direkten Verbindungen **nur die
+garantierten Mindestanteile**:
+
+* `grid_to_battery_min = min(max(grid_import,0), max(battery_charge - pv,0))`
+* `solar_to_grid_min = min(max(pv,0), max(grid_export - battery_discharge,0))`
+
+Die Animation läuft nur bei mindestens 5 W zuordenbarem Mindestanteil.
+Fehlt eine der drei Leistungsquellen, gibt es keine verlässliche Zuordnung.
+Bei bestätigtem Netzausfall, EPS oder negativem Netzkontakt werden
+Netzverbindungen nicht animiert. Die grauen Pfade bleiben mit dem
+üblichen `display_zero_lines: true` sichtbar.
+
+**Wichtig:** Keine Animation heißt hier nicht, dass tatsächlich kein Strom
+über diese Verbindung fließt: Bei gemischter PV- und Netzversorgung lässt
+sich die Herkunft ohne zusätzliche Messdaten nicht eindeutig bestimmen.
+Diese Ableitungen dienen ausschließlich der Visualisierung, nicht der
+15-Minuten-Berechnung und niemals als Schalt- oder Sicherheitskriterium.
+
+Nach HACS-Update auf 0.5.0b2 und Home-Assistant-Neustart wird die
+JavaScript-Ressource auf
+`/local_ems/local-ems-flow-card.mjs?v=0.5.0b2` aktualisiert.

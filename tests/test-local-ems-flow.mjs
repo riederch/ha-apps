@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  toWatts, toPercent, toHertz, buildFlowModel, formatWatts,
+  toWatts, toPercent, toHertz, buildFlowModel, inferDirectFlows, formatWatts,
 } from "../custom_components/local_ems/frontend/flow-model.mjs";
 
 const mk = (value, unit) => ({
@@ -329,4 +329,107 @@ test("all power-flow circles use the PFCP-sized fixed 80px diameter", async () =
   assert.match(source, /left:max\(42px,16%\)/);
   assert.match(source, /left:min\(calc\(100% - 42px\),84%\)/);
   assert.match(source, /"\.disc\{box-sizing:border-box;width:100%;height:100%;aspect-ratio:1;"/);
+});
+
+
+test("solar-to-grid animates only unavoidable PV export", () => {
+  const routes = inferDirectFlows({
+    gridW: -1800, solarW: 3300, batteryW: -600,
+    gridState: "on_grid", gridContact: true,
+  });
+  assert.equal(routes.solarToGridW, 1800);
+  assert.equal(routes.gridToBatteryW, 0);
+});
+
+test("grid-to-battery shows unavoidable grid charging when PV is insufficient", () => {
+  const routes = inferDirectFlows({
+    gridW: 2300, solarW: 500, batteryW: -2000,
+    gridState: "on_grid", gridContact: true,
+  });
+  assert.equal(routes.gridToBatteryW, 1500);
+  assert.equal(routes.solarToGridW, 0);
+});
+
+test("solar can cover battery charging: do not claim grid-to-battery transfer", () => {
+  const routes = inferDirectFlows({
+    gridW: 1200, solarW: 2800, batteryW: -1000,
+    gridState: "on_grid", gridContact: true,
+  });
+  assert.equal(routes.gridToBatteryW, 0);
+});
+
+test("battery discharge could cause all export: do not claim solar-to-grid transfer", () => {
+  const routes = inferDirectFlows({
+    gridW: -1800, solarW: 900, batteryW: 2200,
+    gridState: "on_grid", gridContact: true,
+  });
+  assert.equal(routes.solarToGridW, 0);
+});
+
+test("mixed PV/battery grid export only assigns the guaranteed PV share", () => {
+  const routes = inferDirectFlows({
+    gridW: -3500, solarW: 3000, batteryW: 1800,
+    gridState: "on_grid", gridContact: null,
+  });
+  assert.equal(routes.solarToGridW, 1700);
+});
+
+test("EPS or a missing grid suppresses all direct grid links", () => {
+  for (const state of ["eps", "grid_lost"]) {
+    assert.deepEqual(inferDirectFlows({
+      gridW: -2000, solarW: 3000, batteryW: -1000,
+      gridState: state, gridContact: null,
+    }), { gridToBatteryW: 0, solarToGridW: 0 });
+  }
+  assert.deepEqual(inferDirectFlows({
+    gridW: 2300, solarW: 300, batteryW: -2000,
+    gridState: "on_grid", gridContact: false,
+  }), { gridToBatteryW: 0, solarToGridW: 0 });
+});
+
+test("unknown sensor data never creates fictitious direct power flows", () => {
+  for (const missing of ["gridW", "solarW", "batteryW"]) {
+    const config = {
+      gridW: -2500, solarW: 3000, batteryW: -500,
+      gridState: "on_grid", gridContact: true,
+    };
+    config[missing] = null;
+    assert.deepEqual(inferDirectFlows(config), {
+      gridToBatteryW: 0, solarToGridW: 0,
+    }, missing);
+  }
+});
+
+test("model includes vendor-neutral inferred direct routes", () => {
+  const states = sample();
+  states["sensor.kng_p"] = mk(2400, "W");
+  states["sensor.pv"] = mk(500, "W");
+  states["sensor.battery"] = mk(2000, "W"); // inverter sign, inverted to -2000
+  const chargeModel = buildFlowModel(states, attributes);
+  assert.equal(chargeModel.directFlows.gridToBatteryW, 1500);
+  assert.equal(chargeModel.directFlows.solarToGridW, 0);
+  states["sensor.kng_p"] = mk(-2700, "W");
+  states["sensor.pv"] = mk(3500, "W");
+  states["sensor.battery"] = mk(300, "W"); // inverted to charging
+  const exportModel = buildFlowModel(states, attributes);
+  assert.equal(exportModel.directFlows.solarToGridW, 2700);
+  assert.equal(exportModel.directFlows.gridToBatteryW, 0);
+});
+
+test("card exposes both additional physical path tracks and directional animations", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const { resolve } = await import("node:path");
+  const source = readFileSync(resolve(
+    fileURLToPath(new URL(".", import.meta.url)),
+    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
+  ), "utf8");
+  for (const path of ["solar-grid", "grid-battery"]) {
+    assert.match(source, new RegExp('id="' + path + '-track"'));
+    assert.match(source, new RegExp('id="' + path + '-dots"'));
+    assert.ok(source.includes('this._flow(\n      "' + path + '"'));
+  }
+  assert.ok(source.includes('"solar-grid": model.directFlows.solarToGridW >= 5'));
+  assert.ok(source.includes('"grid-battery": model.directFlows.gridToBatteryW >= 5'));
+  assert.match(source, /showZeroLines \|\| moving\[name\]/);
 });
