@@ -79,3 +79,58 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## Power Flow Card Plus – embedded Local EMS Flow Card
+
+- Original project: https://github.com/flixlix/power-flow-card-plus
+- Upstream source monorepo: https://github.com/flixlix/flixlix-cards
+- Distribution: **0.4.0-beta.1**, current published repository-main build
+  as of 2026-11-08 (not the older 0.3.7 stable release).
+- Exact pinned distribution commit:
+  `d9f3a9255776b3e1a270bf72b2c8039e22047104`
+- License: **MIT**
+- Copyright: **Copyright (c) 2023-2026 flixlix**
+- Bundled distribution: `custom_components/local_ems/frontend/vendor/power-flow-card-plus-v0.4.0-beta.1.mjs`
+- Upstream MIT license: `custom_components/local_ems/frontend/vendor/LICENSE-PFCP`
+
+**Modifications:** The current original JavaScript distribution was
+vendored unchanged except for the six element/tag/selector literals
+used for `power-flow-card-plus` and `power-flow-card-plus-editor`,
+which were namespaced to `local-ems-pfcp-upstream` and
+`local-ems-pfcp-upstream-editor` to avoid collisions with a
+separately installed copy. Power-flow calculations, animation
+timing, rendering, and layout logic remain directly from upstream.
+
+The Local EMS GPL-licensed frontend wrapper and data adapter bridge the
+existing HA Energy Dashboard/EMS sources to this original card.
+They are not a reimplementation of Power Flow Card Plus.
+
+The bundled compiled distribution incorporates upstream runtime
+dependencies; review third-party dependency notices and licenses when
+updating the upstream version.
+
+### Original MIT license notice (Power Flow Card Plus)
+
+```text
+MIT License
+
+Copyright (c) 2023-2026 flixlix
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

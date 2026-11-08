@@ -36,6 +36,8 @@ jobs:
       - name: Verify custom card JavaScript
         run: |
           node --check custom_components/local_ems/frontend/local-ems-flow-card.mjs
+          node --check custom_components/local_ems/frontend/pfcp-adapter.mjs
+          node --check custom_components/local_ems/frontend/vendor/power-flow-card-plus-v0.4.0-beta.1.mjs
           node --check custom_components/local_ems/frontend/flow-model.mjs
           node --check custom_components/local_ems/frontend/energy-preferences.mjs
           node --check custom_components/local_ems/frontend/peak-gauge-model.mjs

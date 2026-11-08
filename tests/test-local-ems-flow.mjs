@@ -6,6 +6,13 @@ import {
   toWatts, toPercent, toHertz, buildFlowModel, inferDirectFlows, formatWatts,
 } from "../custom_components/local_ems/frontend/flow-model.mjs";
 
+import {
+  buildUpstreamBridge, VIRTUAL, UPSTREAM_ELEMENT, UPSTREAM_CARD_TYPE,
+} from "../custom_components/local_ems/frontend/pfcp-adapter.mjs";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
+
 const mk = (value, unit) => ({
   state: String(value),
   attributes: { unit_of_measurement: unit },
@@ -262,23 +269,6 @@ test("Energy kWh-only preferences never fake instantaneous watts", () => {
   assert.equal(model.sourceMode, "ems");
 });
 
-test("native card preserves the circular four-node layout", async () => {
-  const { readFileSync } = await import("node:fs");
-  const { fileURLToPath } = await import("node:url");
-  const { dirname, resolve } = await import("node:path");
-  const root = dirname(fileURLToPath(import.meta.url));
-  const card = readFileSync(resolve(root,
-    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"), "utf8");
-  for (const role of ["solar", "grid", "home", "battery"]) {
-    assert.match(card, new RegExp('class="node ' + role + '"'));
-  }
-  assert.match(card, /border-radius:50%/);
-  assert.match(card, /<path class="dots"/);
-  assert.match(card, /energy\/get_prefs/);
-  assert.doesNotMatch(card, /power-flow-card-plus\.js/);
-});
-
-
 test("the card occupies a full 12-column Sections dashboard by default", async () => {
   // The component's layout API is pure; no browser or Home Assistant
   // connection is required to inspect it.
@@ -294,43 +284,6 @@ test("the card occupies a full 12-column Sections dashboard by default", async (
     rows: "auto",
   });
 });
-
-test("responsive circles stay aligned with the energy-flow topology", async () => {
-  const { readFileSync } = await import("node:fs");
-  const { fileURLToPath } = await import("node:url");
-  const { resolve } = await import("node:path");
-  const card = readFileSync(resolve(
-    fileURLToPath(new URL(".", import.meta.url)),
-    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
-  ), "utf8");
-  for (const text of [
-    "left:max(42px,16%);top:50%", "left:min(calc(100% - 42px),84%);top:50%",
-    "left:50%;top:24%", "left:50%;top:74%",
-    "min-width:0;position:relative",
-    "formatEntityState",
-  ]) {
-    assert.ok(card.includes(text), text);
-  }
-});
-
-
-test("all power-flow circles use the PFCP-sized fixed 80px diameter", async () => {
-  const { readFileSync } = await import("node:fs");
-  const { fileURLToPath } = await import("node:url");
-  const { resolve } = await import("node:path");
-  const source = readFileSync(resolve(
-    fileURLToPath(new URL(".", import.meta.url)),
-    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
-  ), "utf8");
-  assert.match(source, /--ems-bubble-diameter:80px/);
-  assert.match(source, /width:var\(--ems-bubble-diameter\);height:var\(--ems-bubble-diameter\)/);
-  assert.doesNotMatch(source, /width:clamp\(72px/);
-  // A fixed circle must still fit inside a narrower dashboard section.
-  assert.match(source, /left:max\(42px,16%\)/);
-  assert.match(source, /left:min\(calc\(100% - 42px\),84%\)/);
-  assert.match(source, /"\.disc\{box-sizing:border-box;width:100%;height:100%;aspect-ratio:1;"/);
-});
-
 
 test("solar-to-grid animates only unavoidable PV export", () => {
   const routes = inferDirectFlows({
@@ -453,74 +406,157 @@ test("model includes vendor-neutral inferred direct routes", () => {
   assert.equal(exportModel.directFlows.solarToBatteryW, 300);
 });
 
-test("card exposes all three direct path tracks and directional animations", async () => {
-  const { readFileSync } = await import("node:fs");
-  const { fileURLToPath } = await import("node:url");
-  const { resolve } = await import("node:path");
-  const source = readFileSync(resolve(
-    fileURLToPath(new URL(".", import.meta.url)),
-    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
-  ), "utf8");
-  for (const path of ["solar-grid", "grid-battery", "solar-battery"]) {
-    assert.match(source, new RegExp('id="' + path + '-track"'));
-    assert.match(source, new RegExp('id="' + path + '-dots"'));
-    assert.ok(source.includes('this._flow(\n      "' + path + '"'));
-  }
-  assert.ok(source.includes('"solar-grid": directFlows.solarToGridW >= 5'));
-  assert.ok(source.includes('"grid-battery": directFlows.gridToBatteryW >= 5'));
-  assert.ok(source.includes('"solar-battery": directFlows.solarToBatteryW >= 5'));
-  assert.ok(source.includes('solarBattery: "M50 24 V74"'));
-  assert.ok(source.includes("#solar-battery-dots{stroke:var(--ems-solar);}"));
-  assert.match(source, /showZeroLines \|\| moving\[name\]/);
+
+
+function bridge(config = {}, states = sample(), attrs = attributes, energy = null) {
+  return buildUpstreamBridge({ states, language: "de", connection: {} },
+    attrs, energy, config);
+}
+
+test("PFCP adapter uses original bidirectional power signs, not the local EMS scheme", () => {
+  const b = bridge();
+  assert.equal(b.config.type, UPSTREAM_CARD_TYPE);
+  assert.equal(b.config.entities.grid.entity, VIRTUAL.grid);
+  assert.equal(b.config.entities.battery.entity, VIRTUAL.battery);
+  assert.equal(b.config.entities.solar.entity, VIRTUAL.solar);
+  assert.equal(b.hass.states[VIRTUAL.grid].state, "-307");
+  assert.equal(b.hass.states[VIRTUAL.solar].state, "8200");
+  // Local EMS + = discharge; original PFCP - = discharge.
+  assert.equal(b.hass.states[VIRTUAL.battery].state, "-1400");
+  assert.equal(b.hass.states[VIRTUAL.soc].state, "64.5");
+  assert.equal(b.hass.states[VIRTUAL.grid].attributes.unit_of_measurement, "W");
+  assert.equal(b.config.title, "Energiefluss");
+  assert.equal(b.config.entities.home, undefined);
+  assert.equal(b.sourceMap[VIRTUAL.grid], "sensor.kng_p");
 });
 
+test("PFCP battery charging, grid import and grid export use native directions", () => {
+  const states = sample();
+  states["sensor.kng_p"] = mk(2500, "W");
+  states["sensor.battery"] = mk(1900, "W");
+  const b = bridge({}, states);
+  assert.equal(b.hass.states[VIRTUAL.grid].state, "2500");
+  assert.equal(b.hass.states[VIRTUAL.battery].state, "1900");
+  states["sensor.kng_p"] = mk(-800, "W");
+  const c = bridge({}, states);
+  assert.equal(c.hass.states[VIRTUAL.grid].state, "-800");
+});
 
-test("regression: cached old flow-model without directFlows does not crash card", async () => {
-  globalThis.HTMLElement ??= class {};
-  const { safeDirectFlows } = await import(
-    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
-  );
-  const legacy = {
-    gridW: 2400, solarW: 500, batteryW: -2000,
-    directions: { solar: "production", grid: "import", battery: "charge" },
-    // Pre-v0.5.0b2 model has no directFlows.
+test("missing PV readings remain unavailable, not artificial zero production", () => {
+  const states = sample();
+  delete states["sensor.pv"];
+  const b = bridge({}, states);
+  assert.equal(b.hass.states[VIRTUAL.solar].state, "unavailable");
+  assert.equal(b.config.entities.solar.entity, VIRTUAL.solar);
+});
+
+test("EPS outage is forwarded to original PFCP power_outage semantics", () => {
+  const b = bridge({}, sample(), { ...attributes, grid_state: "eps" });
+  assert.equal(b.hass.states[VIRTUAL.grid].state, "0");
+  assert.equal(b.hass.states[VIRTUAL.outage].state, "on");
+  assert.equal(b.config.entities.grid.power_outage.entity, VIRTUAL.outage);
+  assert.equal(b.config.entities.grid.power_outage.state_alert, "on");
+  assert.equal(b.hass.states[VIRTUAL.solar].state, "8200");
+  const noGrid = bridge({}, sample(), { ...attributes, grid_state: "grid_lost" });
+  assert.equal(noGrid.hass.states[VIRTUAL.outage].state, "on");
+});
+
+test("unknown grid status never fabricates a power outage", () => {
+  const b = bridge({}, sample(), { ...attributes, grid_state: "unconfigured" });
+  assert.equal(b.hass.states[VIRTUAL.outage].state, "off");
+});
+
+test("real measured home override is opt-in, original computed home is default", () => {
+  assert.equal(bridge().config.entities.home, undefined);
+  const b = bridge({ use_measured_home: true });
+  assert.equal(b.config.entities.home.entity, VIRTUAL.home);
+  assert.equal(b.config.entities.home.override_state, true);
+  assert.equal(b.hass.states[VIRTUAL.home].state, "3500");
+  assert.equal(b.sourceMap[VIRTUAL.home], "sensor.house");
+});
+
+test("original PFCP YAML is forwarded without losing upstream layout settings", () => {
+  const hass = { states: sample() };
+  const b = buildUpstreamBridge(hass, null, null, {
+    type: "custom:local-ems-flow-card",
+    entities: { battery: { entity: "sensor.battery", invert_state: true } },
+    title: "Originalkarte",
+    max_expected_power: 17000, flow_rate_model: "new",
+  });
+  assert.equal(b.config.type, UPSTREAM_CARD_TYPE);
+  assert.equal(b.config.entities.battery.invert_state, true);
+  assert.equal(b.config.max_expected_power, 17000);
+  assert.equal(b.config.title, "Originalkarte");
+  assert.equal(b.hass, hass);
+  assert.deepEqual(b.sourceMap, {});
+});
+
+test("EMS settings override energy dashboard mappings only with source_mode ems", () => {
+  const energy = { energy_sources: [
+    { type: "grid", stat_rate: "sensor.energy_grid" },
+    { type: "battery", stat_rate: "sensor.energy_battery" },
+  ] };
+  const states = { ...sample(),
+    "sensor.energy_grid": mk(3, "kW"),
+    "sensor.energy_battery": mk(-500, "W"),
   };
-  assert.deepEqual(safeDirectFlows(legacy), {
-    solarToGridW: 0,
-    gridToBatteryW: 0,
-    solarToBatteryW: 0,
-  });
-  assert.deepEqual(safeDirectFlows({ directFlows: null }), {
-    solarToGridW: 0,
-    gridToBatteryW: 0,
-    solarToBatteryW: 0,
-  });
-  assert.deepEqual(safeDirectFlows({
-    directFlows: { solarToGridW: "120", gridToBatteryW: NaN, solarToBatteryW: "300" },
-  }), { solarToGridW: 0, gridToBatteryW: 0, solarToBatteryW: 0 });
-  assert.deepEqual(safeDirectFlows({
-    directFlows: { solarToGridW: 1300, gridToBatteryW: 400, solarToBatteryW: 900 },
-  }), { solarToGridW: 1300, gridToBatteryW: 400, solarToBatteryW: 900 });
-  // The pre-PV-to-battery module must not crash the newer card.
-  assert.deepEqual(safeDirectFlows({
-    directFlows: { solarToGridW: 1300, gridToBatteryW: 400 },
-  }), { solarToGridW: 1300, gridToBatteryW: 400, solarToBatteryW: 0 });
+  assert.equal(bridge({}, states, attributes, energy).hass.states[VIRTUAL.grid].state,
+    "3000");
+  const mapped = bridge({}, states, attributes, energy);
+  assert.equal(mapped.hass.states[VIRTUAL.battery].state, "500");
+  const own = bridge({ source_mode: "ems" }, states, attributes, energy);
+  assert.equal(own.hass.states[VIRTUAL.grid].state, "-307");
+  assert.equal(own.hass.states[VIRTUAL.battery].state, "-1400");
 });
 
-test("nested flow-model ESM import is cache-busted with manifest version", async () => {
-  const { readFileSync } = await import("node:fs");
-  const { fileURLToPath } = await import("node:url");
-  const { resolve } = await import("node:path");
-  const directory = fileURLToPath(new URL(".", import.meta.url));
-  const manifest = JSON.parse(readFileSync(resolve(directory,
+test("no power sources do not produce an invalid original card config", () => {
+  const b = buildUpstreamBridge({ states: {} }, {}, null, {});
+  assert.equal(b, null);
+});
+
+test("bundled original PFCP is pinned, namespaced and licensed", () => {
+  const root = fileURLToPath(new URL(".", import.meta.url));
+  const base = "../custom_components/local_ems/frontend/";
+  const js = readFileSync(resolve(root, base +
+    "vendor/power-flow-card-plus-v0.4.0-beta.1.mjs"), "utf8");
+  const license = readFileSync(resolve(root, base + "vendor/LICENSE-PFCP"), "utf8");
+  assert.match(js, /Power Flow Card Plus original distribution: v0\.4\.0-beta\.1/);
+  assert.ok(js.includes('Ca("local-ems-pfcp-upstream")'));
+  assert.ok(js.includes('Ca("local-ems-pfcp-upstream-editor")'));
+  assert.ok(!js.includes('Ca("power-flow-card-plus")'));
+  assert.match(js, /export\{[A-Za-z_$]+ as PowerFlowCardPlus\}/);
+  assert.match(license, /MIT License/);
+  assert.match(license, /Copyright \(c\) 2023-2026 flixlix/);
+  assert.equal(UPSTREAM_ELEMENT, "local-ems-pfcp-upstream");
+});
+
+test("wrapper serves original renderer and solver, not a custom SVG clone", () => {
+  const root = fileURLToPath(new URL(".", import.meta.url));
+  const base = "../custom_components/local_ems/frontend/";
+  const js = readFileSync(resolve(root, base + "local-ems-flow-card.mjs"), "utf8");
+  const backend = readFileSync(resolve(root, "../custom_components/local_ems/frontend.py"), "utf8");
+  const manifest = JSON.parse(readFileSync(resolve(root,
     "../custom_components/local_ems/manifest.json"), "utf8"));
-  const version = manifest.version;
-  const code = readFileSync(resolve(directory,
-    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"), "utf8");
-  const backend = readFileSync(resolve(directory,
-    "../custom_components/local_ems/frontend.py"), "utf8");
-  // Merely cache-busting the top-level Lovelace resource is insufficient!
-  assert.ok(code.includes('from "./flow-model.mjs?v=' + version + '";'));
-  assert.ok(backend.includes('CARD_VERSION = "' + version + '"'));
-  assert.ok(code.includes("const directFlows = safeDirectFlows(model)"));
+  assert.ok(js.includes('power-flow-card-plus-v0.4.0-beta.1.mjs?v=' + manifest.version));
+  assert.ok(js.includes('pfcp-adapter.mjs?v=' + manifest.version));
+  assert.ok(backend.includes('CARD_VERSION = "' + manifest.version + '"'));
+  assert.ok(js.includes("Original.getConfigElement()"));
+  assert.ok(!js.includes('const PATHS = {'));
+  assert.ok(!js.includes('"solar-grid":'));
+});
+
+
+test("current original bundle 0.4.0-beta.1 preserves upstream provenance", () => {
+  const root = fileURLToPath(new URL(".", import.meta.url));
+  const path = "../custom_components/local_ems/frontend/vendor/";
+  const js = readFileSync(resolve(root, path +
+    "power-flow-card-plus-v0.4.0-beta.1.mjs"), "utf8");
+  assert.ok(js.includes("d9f3a9255776b3e1a270bf72b2c8039e22047104"));
+  assert.ok(js.includes('version:"0.4.0-beta.1"'));
+  assert.ok(js.includes("https://github.com/flixlix/power-flow-card-plus/releases/"));
+  assert.ok(js.includes('Ca("local-ems-pfcp-upstream")'));
+  assert.ok(js.includes('Ca("local-ems-pfcp-upstream-editor")'));
+  assert.ok(!js.includes('Ca("power-flow-card-plus")'));
+  assert.ok(!js.includes('Ca("power-flow-card-plus-editor")'));
+  assert.ok(js.includes('querySelector("#local-ems-pfcp-upstream")'));
 });

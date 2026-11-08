@@ -1,326 +1,129 @@
-# Local EMS – eigene Power-Flow-Karte (0.4.0b2)
+# Local EMS – Original Power Flow Card Plus (ab 0.5.0b5)
 
-## Idee und Grenzen
+## Herkunft und Architektur
 
-**Local EMS** liefert eine eigene, integrierte Lovelace-Karte
-`custom:local-ems-flow-card`. Die bisher separate Community-Karte
-`power-flow-card-plus` ist dafür **nicht erforderlich**.
+Die integrierte Karte `custom:local-ems-flow-card` verwendet den
+**originalen Renderer, Flussberechner und Editor von Power Flow Card Plus**.
+Wir verwenden bewusst die aktuelle **0.4.0-beta.1-Distribution** aus
+[flixlix/power-flow-card-plus](https://github.com/flixlix/power-flow-card-plus)
+(Main-Commit `d9f3a9255776b3e1a270bf72b2c8039e22047104` vom
+8. November 2026), **nicht** den älteren stabilen Release 0.3.7.
 
-**Standard: Energy-Dashboard als Datenquelle.** Die Karte liest die
-Einstellungen über Home Assistants lesende WebSocket-API
-`energy/get_prefs` und verwendet deren `stat_rate` bzw.
-`power_config` für Netz, PV, Haus und Batterie, einschließlich
-getrenntem Netzbezug/Einspeisung, Laden/Entladen, mehreren Quellen und
-Batterie-SoC. Die im EMS hinterlegten Leistungsquellen dienen als
-**Fallback**, falls im Energy-Dashboard kein Echtzeit-Leistungssensor
-konfiguriert ist. Die Karte liest aktuelle HA-Zustände direkt.
-Dadurch werden **keine zweiten Leistungszeitreihen im HA Recorder** erzeugt.
+Der ursprüngliche Quellcode lebt im
+[flixlix-cards-Monorepo](https://github.com/flixlix/flixlix-cards).
+Die Hauptzweige können sich unabhängig von der zuletzt veröffentlichten
+gebündelten JavaScript-Distribution weiterentwickeln. Die Datei wird bei
+Local EMS deshalb bewusst auf einen genauen Commit fixiert.
 
-Die Karte nutzt bewusst die **runde Energiefluss-Topologie** in Anlehnung an
-die Home-Assistant-Energieverteilung und Power Flow Card Plus:
-PV **oben**, Netz **links**, Haus **rechts**, Batterie **unten**.
-Gebogene Verbindungslinien, animierte farbige Punkte, Live-Leistungswerte,
-Batterieladestand, Netzfrequenz, WR-Rohzustand und EPS-Status gehören dazu.
-Die Darstellung ist eine **eigene Implementierung**, ohne fremde JavaScript-
-Bibliothek oder Abhängigkeit von Power Flow Card Plus.
+Die Integration besteht aus drei getrennten Komponenten:
 
-Die zusätzliche Metadaten-Entität **Local EMS Energy flow** enthält
-Konfiguration und Sicherheitsstatus, **nicht** kontinuierliche Kopien der
-Leistungsmesswerte. Bestehende EMS-Entitäten bleiben erhalten.
+1. `frontend/vendor/power-flow-card-plus-v0.4.0-beta.1.mjs`: aktueller
+   Upstream-Build mit originaler Berechnung, UI, responsivem Layout,
+   Animationen und Original-Konfigurationseditor.
+2. `frontend/pfcp-adapter.mjs`: eigenständiger Adapter zwischen
+   Home Assistant Energy Dashboard / Local EMS und dem nativen PFCP-Datenformat.
+3. `frontend/local-ems-flow-card.mjs`: bestehender Local-EMS-Kartentyp,
+   Registrierung, Quellenübernahme und More-Info-Aufrufe.
 
-## Konfiguration mit der vorhandenen Sofar/KNG-Anlage (Beispiel, nicht fest verdrahtet)
+An der Originaldatei wurden **nur die Elementnamen und die zugehörigen
+Selektoren** umbenannt (`local-ems-pfcp-upstream` statt
+`power-flow-card-plus`). Dadurch kollidiert unsere eingebettete
+Version nicht mit einer separat installierten Originalkarte.
+Die originale Energiebilanz, ihre PV-/Netz-/Batteriepfade
+und deren Animationen bleiben erhalten. Es existiert keine
+eigene Local-EMS-SVG-Nachbildung mehr.
 
-Unter **Einstellungen → Geräte & Dienste → Integrationen → Local EMS →
-Konfigurieren → Energie-Messwerte zuordnen**:
+## Einrichtung
 
-| Feld | Beispiel-Entität |
-|---|---|
-| Netzleistung | `sensor.kng_p` |
-| PV-Leistung | `sensor.hyd20ktl_3p_pv_leistung_gesamt` |
-| Hausleistung | `sensor.hyd20ktl_3p_wirkleistungslast_system` |
-| Batterieleistung | `sensor.sofar_batterie_1_leistung` |
-| Batterie-SoC | `sensor.sofar_batterie_1_ladezustand` |
-| Netzfrequenz | `sensor.hyd20ktl_3p_netzfrequenz` |
-| Netzleistung umkehren | AUS (sofern positive Werte Netzbezug bedeuten) |
-| Batterieleistung umkehren | EIN, entsprechend dem bisher verwendeten `invert_state: true` |
-
-Unter **Netz-/EPS-Sicherheit und Betriebsmodus**:
-
-- Wechselrichterzustand: `sensor.hyd20ktl_3p_systemzustand`
-- Physischer Netzkontakt: `binary_sensor.kng_netzversorgung` **nur wenn dessen
-  Bedeutung bei on/off überprüft wurde**.
-- Exakte erlaubte Netz-/EPS-Zustandswerte und WR-Betriebsmodus aus den
-  HA-Entwicklerwerkzeugen übernehmen; **nicht** pauschal Herstellerwerte
-  annehmen.
-
-Für andere Wechselrichter dürfen vollständig andere HA-Entitäten gewählt
-werden. Die Karte enthält **keinen Herstelleradapter**.
-
-## Dashboard-Karte verwenden
-
-Nach HACS-Update auf 0.4.0b2 und Neustart von Home Assistant:
+Nach HACS-Update auf Local EMS `0.5.0b5`, HA-Neustart und
+vollständigem Neuladen des Dashboards bleibt die Kartendeklaration:
 
 ```yaml
 type: custom:local-ems-flow-card
 ```
 
-Das ist die gesamte Dashboard-Konfiguration für einen EMS-Eintrag.
-Die Karte zeigt **momentane Leistungen in W/kW**. Die Energiezähler in
-Wh/kWh übernimmt unser EMS weiterhin für Peak- und Verbrauchsanalysen; die
-Karte darf aus einem kumulativen kWh-Zähler **keine scheinbar sekundengenaue
-Leistung** ableiten.
-
-Falls die Leistungs-Sensoren des Energy-Dashboards nicht verwendet werden
-sollen (z. B. wegen Spezialmessungen), ist ein Dashboard-Override möglich:
+Die Karte liest standardmäßig die Leistungssensoren aus den Einstellungen
+des Home Assistant Energy Dashboards (`energy/get_prefs`) und verwendet
+ansonsten die konfigurierten Local-EMS-Quellen. Für die explizite
+Local-EMS-Sensorzuordnung:
 
 ```yaml
 type: custom:local-ems-flow-card
 source_mode: ems
 ```
 
-Damit verwendet die Karte wieder die zentral im EMS hinterlegten Sensoren,
-ohne diese im Dashboard erneut angeben zu müssen.
+Auch die erweiterten Original-Einstellungen (Farben, Flussgeschwindigkeit,
+einzelne Verbraucher, Animationen, Linien, Layout) werden durchgereicht.
+Der Original-Editor kann bei manueller PFCP-Konfiguration verwendet werden.
 
-Bei mehreren Local-EMS-Instanzen kann die passende Metadaten-Entität explizit
-gewählt werden:
+### Vollständig manuelle Konfiguration
 
-```yaml
-type: custom:local-ems-flow-card
-entity: sensor.local_ems_energy_flow
-title: Haus-Energiefluss
-```
-
-Der Name der Entität kann durch HA bei Namenskonflikten variieren. Ohne
-Angabe sucht die Karte automatisch nach einer HA-Entität mit
-`ems_flow_version: 1`.
-
-Klick auf einen Knoten öffnet die normale HA-Mehr-Info-Ansicht des
-zugeordneten Quellsensors. Alle Symbole nutzen HA-eigene Material-Icons und
-die HA-Farbvariablen, einschließlich Dark Mode.
-
-## Installation der Dashboard-Ressource
-
-In HA-Dashboards mit Speicherung über die Oberfläche versucht Local EMS,
-sein eigenes Modul **automatisch** als Lovelace-Ressource zu registrieren
-(nachdem bereits vorhandene Ressourcen geladen wurden).
-
-Wenn die Registrierung nicht möglich ist, unter **Einstellungen →
-Dashboards → Ressourcen → Ressource hinzufügen** einmalig anlegen:
-
-- URL: `/local_ems/local-ems-flow-card.mjs?v=0.4.0b2`
-- Typ: **JavaScript-Modul**
-
-Bei YAML-Ressourcenverwaltung stattdessen entsprechend im Lovelace-Abschnitt
-eintragen:
-
-```yaml
-lovelace:
-  resource_mode: yaml
-  resources:
-    - url: /local_ems/local-ems-flow-card.mjs?v=0.4.0b2
-      type: module
-```
-
-Das ist **nur** eine Dashboard-Ressource und keine erneute Zuordnung der
-Leistungsmesswerte. Nach Ressourcenänderungen die Dashboard-Seite
-vollständig neu laden (ggf. Browsercache leeren).
-
-## Physikalisches Vorzeichenmodell
-
-- Netz: **+ = Bezug**, **– = Einspeisung**.
-- Batterie: **+ = Entladen**, **– = Laden**.
-- PV und Haus: positive Leistungswerte.
-- Quellwerte können in W oder kW gemeldet werden; die Karte rechnet
-  intern in W um, Frequenz in Hz und SoC in Prozent.
-- Nicht verfügbare oder unpassende Messwerte werden als **—** angezeigt,
-  nicht stillschweigend als 0.
-- Das Haus wird mit dem zugeordneten Hausleistungs-Sensor dargestellt.
-  Es wird **keine fiktive Bilanz** erfunden, wenn eine Größe fehlt.
-
-Die Karte zeigt reale **momentane Leistungen**, nicht Viertelstundenenergie
-oder garantierte Leistungsflüsse zu einzelnen Verbrauchern. Animationen
-geben die Richtung der vorzeichenbehafteten Größen wieder; sie ersetzen
-keine elektroenergetische Lastflussberechnung.
-
-## Warum nicht einfach power-flow-card-plus?
-
-Die eigene Local-EMS-Karte hat jetzt den **vertrauten Kreis-/Punktfluss-Stil**,
-bleibt aber schlanker als Power Flow Card Plus: noch kein vollständiger
-grafischer Editor und noch keine zusätzlichen individuellen
-Wallbox-/Heizstab-Knoten. Sie verwendet native HA-Themenfarben und ist
-**keine pixelgenaue Kopie** der Fremdkarte. Native Power-Sankey-Diagramme
-sind ausdrücklich **nicht** das gewählte Layout.
-
-Bis die Darstellung und alle Richtungen in der eigenen HA-Instanz
-verifiziert wurden, die bisherige Karte bitte als Referenz behalten.
-Die EMS-Integration steuert in diesem Release weiterhin keine Verbraucher.
-
-
-## Abschnittsbreite in HA Sections (ab 0.4.0b3)
-
-Die Local-EMS-Karte meldet über `getGridOptions()` standardmäßig
-**12 von 12 Spalten** (volle Abschnittsbreite) und verwendet die automatische
-Zeilenhöhe. Damit ist sie standardmäßig genauso breit wie eine ganzzeilige
-Power Flow Card Plus. Die Kreisgrößen und Positionen wurden auf diese
-Breite abgestimmt; der Wechselrichterzustand wird, sofern HA dies anbietet,
-als **lokalisierter** Wert statt als englischer Rohzustand angezeigt.
-
-**Achtung bei bereits gespeicherten Karten:** In der Sections-Ansicht
-gespeicherte `grid_options` haben Vorrang vor neuen Kartenvorgaben.
-Bestehende Karten mit `columns: 6` müssen deshalb einmalig auf Breite 12
-umgestellt werden (Karte bearbeiten → Layout) oder explizit:
+Die Konfiguration unter `entities` wird an die Originalkarte übergeben,
+ohne dass Local EMS deren Quellen überschreibt:
 
 ```yaml
 type: custom:local-ems-flow-card
-grid_options:
-  columns: 12
-  rows: auto
+entities:
+  grid:
+    entity: sensor.kng_p
+  solar:
+    entity: sensor.hyd20ktl_3p_pv_leistung_gesamt
+  battery:
+    entity: sensor.sofar_batterie_1_leistung
+    state_of_charge: sensor.sofar_batterie_1_ladezustand
+    invert_state: true  # Vorzeichen des tatsächlichen Sensors prüfen
 ```
 
-Die Breite 12 meint die volle **Abschnittsbreite**, nicht zwingend die gesamte
-Dashboard-Fensterbreite. Wird eine Section selbst nur halb so breit
-angezeigt, muss die Dashboard-Anordnung entsprechend geändert werden.
+Diese Entity-IDs dienen nur als Beispiel. Im manuellen Modus ist
+die Verantwortung für Einheit, Vorzeichen und Verfügbarkeit bei
+der HA-Konfiguration; hier werden nicht automatisch zusätzliche
+Local-EMS-Sicherheitsinformationen eingebunden.
 
-Falls die bisherige PFCP-Karte Netzfrequenz zeigt, unsere Local-EMS-Karte
-aber nicht, in **Local EMS → Konfigurieren → Energie-Messwerte**
-`sensor.hyd20ktl_3p_netzfrequenz` dem Feld **Netzfrequenz** zuordnen.
-Dieser Zusatzwert gehört nicht zu den üblichen Energy-Dashboard-Prefs.
+### Adapter und Vorzeichen
 
-## Feste Kreisgröße wie Power Flow Card Plus (ab 0.4.0b4)
+Bei automatischer Quellenübernahme gilt:
 
-Die vier Leistungsknoten **Netz, Haus, PV und Batterie** haben jetzt einen
-einheitlichen, festen Durchmesser von **80 CSS-Pixeln**. Das entspricht
-ungefähr der Kreisgröße in der auf dem Dashboard verglichenen Power Flow
-Card Plus. Die Kreise wachsen nicht mehr mit der Karten- bzw.
-Sections-Spaltenbreite (vorher `clamp(72px,23%,116px)`).
+- Netzleistung `+` = Bezug, `−` = Einspeisung.
+- Local EMS Batterie `+` = Entladung, `−` = Ladung.
+- Power Flow Card Plus Batterie `+` = Ladung, `−` = Entladung.
+- Der Adapter invertiert daher die Batterie und liefert Werte in **W**.
+- Fehlende/ungültige Originalmesswerte bleiben `unavailable`, nicht `0`.
+- Optional `use_measured_home: true` zeigt den vorhandenen gemessenen
+  Hausverbrauch statt der aus Original-PFCP-Flüssen berechneten Bilanz.
+- Virtuelle Quell-Objekte existieren **nur im Browser**;
+  sie erzeugen keine echten HA-Entitäten und keine Recorder-Einträge.
 
-Die Kreismittelpunkte bleiben relativ zum verfügbaren Kartenbereich
-angeordnet; bei besonders schmalen Karten begrenzen `max()/min()`
-den Abstand zum seitlichen Rand, damit 80-Pixel-Kreise nicht abgeschnitten
-werden. Die Texte im Inneren bleiben platzsparend; lange Statuswerte
-werden weiterhin bei Bedarf gekürzt und zusätzlich unterhalb ausgegeben.
+### Netz- und EPS-Betrieb
 
-Die Änderung betrifft **nur das Dashboard**. Die EMS-Datenquellen,
-Netz-/EPS-Sicherheitslogik und alle Verbraucher bleiben unverändert.
+Der erkannte EMS-Status `eps`/`grid_lost` bzw. ein explizit negativer
+Netzkontakt wird für die Originalkarte als Power Outage gemeldet.
+Der angezeigte Netzleistungswert wird dann auf `0` gesetzt, um
+keine alten Smartmeter-Netzflüsse zu animieren.
+Ein Generator wird ohne eigene Messquelle nicht als zusätzlicher
+Erzeuger bilanziert. **Diese Karte steuert keine Verbraucher und
+ersetzt keine EPS-Sicherheitsfunktionen.**
 
+## Caching und Aktualisierung
 
-## Direkte Netz-/Batterie- und PV-/Netz-Verbindungen (ab 0.5.0b2)
+Nach dem Chrome-Android-Cachefehler in der Version 0.5.0b2
+erhalten der Hauptkartenimport, der EMS-Adapter, das Messmodell
+und die eingebettete Upstream-Datei getrennte Versionskennungen.
+Die Ressource wird unter `/local_ems/local-ems-flow-card.mjs?v=0.5.0b5`
+registriert. Ein Browser-Neuladen nach dem HA-Neustart wird empfohlen.
 
-Die Karte enthält zusätzlich zu den bisherigen drei Verbindungen zwei
-linksseitige, geschwungene Pfade:
+## Credits, Lizenz und Rückbau
 
-* **Netz → Batterie:** Netzstrom, der für die aktuelle Batterieladung
-  zwingend erforderlich ist. Die Animation läuft von links nach unten.
-* **Solar → Netz:** PV-Erzeugung, die zwingend zur aktuellen Netzeinspeisung
-  beiträgt. Die Animation läuft von oben nach links.
+- Original: [Power Flow Card Plus von flixlix](https://github.com/flixlix/power-flow-card-plus).
+- Version: **0.4.0-beta.1**, Commit `d9f3a9255776b3e1a270bf72b2c8039e22047104`.
+- Copyright (c) 2023–2026 flixlix, **MIT**.
+- Vollständige Lizenz: [`vendor/LICENSE-PFCP`](../custom_components/local_ems/frontend/vendor/LICENSE-PFCP).
+- Nachweise: [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) und
+  [`LICENSE_SCOPE.md`](../LICENSE_SCOPE.md).
+- Eigener Local-EMS-Adapter und Backend: GPL-3.0-or-later.
 
-Beide Verbindungen nutzen die vorhandenen Netz-, Solar- und Batterie-
-Leistungssensoren. Es sind **keine zusätzlichen Home-Assistant-Entitäten**
-und **keine YAML-Einstellungen** erforderlich:
-
-```yaml
-type: custom:local-ems-flow-card
-```
-
-### Physikalische Aussage und Grenzen
-
-Ein AC-Bus hat keine originären Messwerte für die paarweisen Energieflüsse.
-Aus Netz-, PV-, Batterie- und Hausleistungsmessungen lässt sich nicht
-eindeutig nachweisen, welcher Erzeuger welchen Verbraucher versorgt.
-Daher berechnet die Karte für die neuen direkten Verbindungen **nur die
-garantierten Mindestanteile**:
-
-* `grid_to_battery_min = min(max(grid_import,0), max(battery_charge - pv,0))`
-* `solar_to_grid_min = min(max(pv,0), max(grid_export - battery_discharge,0))`
-
-Die Animation läuft nur bei mindestens 5 W zuordenbarem Mindestanteil.
-Fehlt eine der drei Leistungsquellen, gibt es keine verlässliche Zuordnung.
-Bei bestätigtem Netzausfall, EPS oder negativem Netzkontakt werden
-Netzverbindungen nicht animiert. Die grauen Pfade bleiben mit dem
-üblichen `display_zero_lines: true` sichtbar.
-
-**Wichtig:** Keine Animation heißt hier nicht, dass tatsächlich kein Strom
-über diese Verbindung fließt: Bei gemischter PV- und Netzversorgung lässt
-sich die Herkunft ohne zusätzliche Messdaten nicht eindeutig bestimmen.
-Diese Ableitungen dienen ausschließlich der Visualisierung, nicht der
-15-Minuten-Berechnung und niemals als Schalt- oder Sicherheitskriterium.
-
-Nach HACS-Update auf 0.5.0b2 und Home-Assistant-Neustart wird die
-JavaScript-Ressource auf
-`/local_ems/local-ems-flow-card.mjs?v=0.5.0b2` aktualisiert.
-
-## Absturzschutz beim Update auf 0.5.0b3
-
-In Version 0.5.0b2 konnte Home Assistant im Chrome-Browser bereits die
-**aktualisierte Hauptkarte** mit neuen Solar→Netz- und Netz→Batterie-Pfaden
-laden, während das unveränderte Importziel `flow-model.mjs` noch aus
-dem Browser-ESM-Cache stammte. Das alte Modell enthielt kein
-`directFlows`, was zu
-`Cannot read properties of undefined (reading 'solarToGridW')` führte.
-
-Der Fix hat zwei Ebenen:
-
-1. Die Karte verwendet für `flow-model.mjs` nun einen
-   **versionierten Modulimport** (`?v=0.5.0b3`). Damit lädt der
-   Browser beim Versionswechsel auch die geänderte Unterdatei.
-2. Das Modell wird defensiv verarbeitet: Fehlt `directFlows`
-   oder ein gültiger Zahlenwert, bleiben die beiden neuen
-   Animationen aus, während die restliche Karte normal weiterläuft.
-
-Die zentralen Netzmessungen, der 15-Minuten-Gauge und die
-EPS-Sicherheitslogik bleiben davon unberührt.
-
-**Aktualisierung:** Local EMS in HACS auf 0.5.0b3 aktualisieren,
-Home Assistant neu starten und die Dashboard-Seite im Browser bzw.
-der Companion-App vollständig neu laden.
-
-
-## Direkte PV → Batterie-Verbindung (ab 0.5.0b4)
-
-Die Flow-Card enthält nun außerdem einen **mittigen, vertikalen Pfad
-von Solar zu Batterie**. Bei zuordenbarer PV-Ladeleistung erscheinen
-animierte, PV-farbene Punkte von **oben nach unten**. Alle vier
-Knoten und die bisherigen fünf Verbindungen bleiben erhalten.
-
-### Bestimmung der PV-Ladeleistung
-
-Die vorhandenen Leistungssensoren messen PV-Produktion, Netzbezug bzw.
-Einspeisung und Batterieleistung, aber nicht eine eigene physikalische
-PV-zu-Batterie-Leitung. Deshalb animieren wir aus denselben Gründen
-wie bei den anderen Direktpfaden nur einen **konservativen Mindestwert**:
-
-`pv_to_battery_min = min(pv, max(0, battery_charge - grid_import))`
-
-- Nur wenn die Batterie lädt (`batteryW < 0`) und PV produziert
-  (`solarW > 0`), kann der Pfad aktiviert werden.
-- Steht für die Batterieladung weniger Netzleistung zur Verfügung
-  als die Batterie aufnimmt, muss der Rest bei vollständiger Bilanz
-  mindestens aus PV stammen.
-- Bei Netzeinspeisung (`gridW < 0`) ist der aktuelle Netzbezug
-  gleich null und der PV-Pfad kann entsprechend aktiv sein.
-- Bei gleichzeitigem Netzbezug kann die Animation ausbleiben,
-  **obwohl ein realer PV-Anteil die Batterie lädt**: Eine
-  garantierte Zuordnung ist aus Summenzählern nicht möglich.
-- Fehlen Messwerte oder ist die Netz-/EPS-Situation unklar,
-  wird der direkte Pfad nicht animiert. Insbesondere modelliert
-  Local EMS einen möglichen Generatoranschluss nicht als eigene
-  Energiequelle; deshalb werden während EPS keine geschätzten
-  PV-zu-Batterie-Anteile erfunden.
-- Bei `display_zero_lines: true` bleibt die Verbindung grau sichtbar.
-
-Die Darstellung ist **nur Monitoring**. Sie beeinflusst weder die
-15-Minuten-Spitzenberechnung noch Verbraucher, Batterie oder
-EPS-Sicherheitssteuerung.
-
-### Installation
-
-Local EMS auf `0.5.0b4` aktualisieren und Home Assistant neu starten.
-Die bestehende Ressource
-`/local_ems/local-ems-flow-card.mjs?v=0.5.0b4` lädt jetzt auch
-`flow-model.mjs?v=0.5.0b4`, um den zuvor beobachteten
-Chrome-ESM-Cachefehler zu vermeiden. Danach Dashboard vollständig
-neu laden. Unveränderte Kartenkonfiguration:
-
-```yaml
-type: custom:local-ems-flow-card
-```
+Vor der produktiven Abnahme muss die tatsächliche Darstellung in der
+laufenden Home-Assistant-Instanz mit KNG und Sofar getestet werden,
+insbesondere PV→Batterie, Netz→Batterie, Solar→Netz, negative Messwerte
+und EPS. Dieser UI-Test ist durch GitHub Actions nicht ersetzt.
+Für Rollback die frühere Local EMS Version `0.5.0b4` nutzen;
+die EMS-Konfiguration wird durch den UI-Austausch nicht verändert.

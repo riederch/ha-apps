@@ -191,3 +191,27 @@ Die Karte nutzt die **bereits registrierte Local-EMS-JavaScript-Ressource**
 und vorhandene Daten des HA Coordinators. Kein eigenes Messarchiv, kein
 zusätzliches HACS-Card-Repository und keine neuen Steuerungsbefehle.
 [Beschreibung und Grenzen](docs/local-ems-peak-gauge.md).
+
+## Local EMS 0.5.0b5 – Original Power Flow Card Plus eingebettet
+
+Unsere bisher selbst gezeichnete `custom:local-ems-flow-card` verwendet ab
+0.5.0b5 den **originalen Renderer und die originale Energieflussberechnung**
+der aktuellen Originaldistribution **Power Flow Card Plus v0.4.0-beta.1**.
+Es handelt sich um den am 8. November 2026 veröffentlichten Build im
+Upstream-Repository `flixlix/power-flow-card-plus` (Commit `d9f3a925`).
+Die Datei ist lokal mitgeliefert; eine zweite HACS-Installation entfällt.
+Bestehende `custom:local-ems-flow-card`-Dashboards behalten dieselbe Karten-ID.
+
+Ein eigenständiger, überschaubarer Adapter übergibt die Energy-Dashboard-
+oder EMS-Leistungswerte nach Normierung von Einheiten und Vorzeichen.
+Die Originalkarte übernimmt Layout, Flussverteilung und Animationen.
+Die eigene 15-Minuten-Auswertung sowie die EMS-Netz-/EPS-Sicherheitslogik
+bleiben davon unabhängig. Für alle neuen Diagrammstände sind Tests mit
+realen Home-Assistant-Daten erforderlich; Beta bleibt Beta.
+
+**Credits und Lizenz:** [Power Flow Card Plus – flixlix](https://github.com/flixlix/power-flow-card-plus), MIT,
+Copyright (c) 2023–2026 flixlix. Vollständiger Original-Lizenztext:
+[vendor/LICENSE-PFCP](custom_components/local_ems/frontend/vendor/LICENSE-PFCP).
+Details zur exakten Version und Anpassung:
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) und
+[Flow-Card-Dokumentation](docs/local-ems-flow.md).
