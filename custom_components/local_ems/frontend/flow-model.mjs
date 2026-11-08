@@ -53,6 +53,36 @@ function rawState(states, entityId) {
   return UNKNOWN.has(raw.toLowerCase()) ? null : raw;
 }
 
+/**
+ * Conservative *minimum* allocations for the two direct grid/solar links.
+ * A power-flow display cannot identify the physical source of charging or
+ * export from bus totals alone. So a link animates only if part of the transfer
+ * is forced by conservation of energy, even under the most conservative
+ * allocation of the competing source.
+ *
+ * grid -> battery: charging beyond all available PV must use imported power.
+ * solar -> grid: export beyond all battery discharge must involve PV.
+ * Both require valid power sensors and an electrically available grid.
+ * The result is not a per-path meter and must never be used for actuation.
+ */
+export function inferDirectFlows({ gridW, solarW, batteryW, gridState, gridContact }) {
+  const gridUnavailable = gridState === "eps" || gridState === "grid_lost" ||
+    gridContact === false;
+  const complete = [gridW, solarW, batteryW].every(Number.isFinite) &&
+    solarW >= 0;
+  if (gridUnavailable || !complete) {
+    return { gridToBatteryW: 0, solarToGridW: 0 };
+  }
+  const importW = Math.max(0, gridW);
+  const exportW = Math.max(0, -gridW);
+  const chargeW = Math.max(0, -batteryW);
+  const dischargeW = Math.max(0, batteryW);
+  return {
+    gridToBatteryW: Math.min(importW, Math.max(0, chargeW - solarW)),
+    solarToGridW: Math.min(solarW, Math.max(0, exportW - dischargeW)),
+  };
+}
+
 export function buildFlowModel(states, attributes, preferences = null, options = {}) {
   const attrs = attributes ?? {};
   const explicit = attrs.source_entities ?? {};
@@ -118,6 +148,9 @@ export function buildFlowModel(states, attributes, preferences = null, options =
   return {
     sources: sourceEntities, gridW, solarW, batteryW, houseW,
     batterySoc, frequency, inverterState, gridContact,
+    directFlows: inferDirectFlows({
+      gridW, solarW, batteryW, gridState: status, gridContact,
+    }),
     gridState: status,
     safetyReason: attrs.grid_safety_reason || null,
     controlAllowed: attrs.control_allowed === true,

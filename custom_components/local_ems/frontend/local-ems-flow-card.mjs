@@ -70,6 +70,11 @@ const PATHS = {
   solar: "M50 24 V40 Q50 47 60 47 H84",
   battery: "M50 76 V60 Q50 53 60 53 H84",
   batteryReverse: "M84 53 H60 Q50 53 50 60 V76",
+  // Direct routes on the left side, joining the respective source nodes.
+  // Solar -> grid and grid -> battery are only animated where conservative
+  // energy-balance inference confirms a minimum transfer.
+  solarGrid: "M50 24 V40 Q50 47 40 47 H16",
+  gridBattery: "M16 50 H40 Q50 53 50 60 V74",
 };
 
 // Percent-based paths keep the same power-flow topology on phones, tablets,
@@ -99,8 +104,8 @@ const CSS = [
   ".track[data-visible='false']{visibility:hidden;}",
   ".dots{stroke-width:5;stroke-dasharray:1 20;animation:power-dots 1.4s linear infinite;}",
   ".dots[data-active='false']{visibility:hidden;animation:none;}",
-  "#solar-dots{stroke:var(--ems-solar);}",
-  "#grid-dots{stroke:var(--ems-grid);}",
+  "#solar-dots,#solar-grid-dots{stroke:var(--ems-solar);}",
+  "#grid-dots,#grid-battery-dots{stroke:var(--ems-grid);}",
   "#battery-dots{stroke:var(--ems-battery);}",
   "@keyframes power-dots{from{stroke-dashoffset:0;}to{stroke-dashoffset:-84;}}",
   ".node{position:absolute;transform:translate(-50%,-50%);",
@@ -158,9 +163,13 @@ const TEMPLATE = [
   '<path class="track" id="grid-track" d="M16 50 H84"></path>',
   '<path class="track" id="solar-track" d="M50 24 V40 Q50 47 60 47 H84"></path>',
   '<path class="track" id="battery-track" d="M50 76 V60 Q50 53 60 53 H84"></path>',
+  '<path class="track" id="solar-grid-track" d="M50 24 V40 Q50 47 40 47 H16"></path>',
+  '<path class="track" id="grid-battery-track" d="M16 50 H40 Q50 53 50 60 V74"></path>',
   '<path class="dots" id="grid-dots" data-active="false"></path>',
   '<path class="dots" id="solar-dots" data-active="false"></path>',
   '<path class="dots" id="battery-dots" data-active="false"></path>',
+  '<path class="dots" id="solar-grid-dots" data-active="false"></path>',
+  '<path class="dots" id="grid-battery-dots" data-active="false"></path>',
   "</svg>",
   '<button type="button" class="node solar" data-node="solar">',
   '<span class="name" data-name="solar"></span><span class="disc">',
@@ -412,12 +421,22 @@ export class LocalEMSFlowCard extends HTMLElement {
       solar: model.directions.solar === "production",
       grid: ["import", "export"].includes(model.directions.grid),
       battery: ["discharge", "charge"].includes(model.directions.battery),
+      "solar-grid": model.directFlows.solarToGridW >= 5,
+      "grid-battery": model.directFlows.gridToBatteryW >= 5,
     };
     for (const name of Object.keys(moving)) {
       this._root.getElementById(name + "-track").dataset.visible =
         showZeroLines || moving[name] ? "true" : "false";
     }
     this._flow("solar", moving.solar, PATHS.solar, model.solarW);
+    this._flow(
+      "solar-grid", moving["solar-grid"], PATHS.solarGrid,
+      model.directFlows.solarToGridW
+    );
+    this._flow(
+      "grid-battery", moving["grid-battery"], PATHS.gridBattery,
+      model.directFlows.gridToBatteryW
+    );
     this._flow(
       "grid", moving.grid,
       model.directions.grid === "export" ? PATHS.gridReverse : PATHS.grid,
