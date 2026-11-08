@@ -5,7 +5,9 @@
  * and Power Flow Card Plus, but has no imported code or runtime dependency
  * on another dashboard card.
  */
-import { buildFlowModel, formatWatts } from "./flow-model.mjs";
+// Version the *imported* module, not just the Lovelace entry point. Chrome
+// otherwise reuses an older flow-model.mjs after upgrading the top-level card.
+import { buildFlowModel, formatWatts } from "./flow-model.mjs?v=0.5.0b3";
 // Both Local EMS cards are shipped through the same Lovelace JS resource.
 import "./local-ems-peak-gauge-card.mjs";
 
@@ -196,6 +198,21 @@ const TEMPLATE = [
   '<div class="note" id="note"></div>',
   "</ha-card>",
 ].join("");
+
+/**
+ * A separately cached old flow-model.mjs can omit directFlows. Never let that
+ * take down the entire Lovelace card: fail closed for the two *visual* links.
+ * Missing/invalid values must not become animated or imply energy transfer.
+ */
+export function safeDirectFlows(model) {
+  const flows = model?.directFlows;
+  const valid = (watts) =>
+    Number.isFinite(watts) && watts > 0 ? watts : 0;
+  return {
+    solarToGridW: valid(flows?.solarToGridW),
+    gridToBatteryW: valid(flows?.gridToBatteryW),
+  };
+}
 
 function secondsPerFlow(watts, minRate = 0.75, maxRate = 6, expected = 2000) {
   if (!Number.isFinite(watts) || !Number.isFinite(expected) || expected <= 0) {
@@ -417,12 +434,16 @@ export class LocalEMSFlowCard extends HTMLElement {
       if (detailEl) detailEl.title = detail;
     }
 
+    // Older browsers may still hold a pre-0.5.0b2 flow-model.mjs in their
+    // module cache. Keep the card operational and do not animate unverified
+    // direct transfers; the versioned import above fetches the current model.
+    const directFlows = safeDirectFlows(model);
     const moving = {
       solar: model.directions.solar === "production",
       grid: ["import", "export"].includes(model.directions.grid),
       battery: ["discharge", "charge"].includes(model.directions.battery),
-      "solar-grid": model.directFlows.solarToGridW >= 5,
-      "grid-battery": model.directFlows.gridToBatteryW >= 5,
+      "solar-grid": directFlows.solarToGridW >= 5,
+      "grid-battery": directFlows.gridToBatteryW >= 5,
     };
     for (const name of Object.keys(moving)) {
       this._root.getElementById(name + "-track").dataset.visible =
@@ -431,11 +452,11 @@ export class LocalEMSFlowCard extends HTMLElement {
     this._flow("solar", moving.solar, PATHS.solar, model.solarW);
     this._flow(
       "solar-grid", moving["solar-grid"], PATHS.solarGrid,
-      model.directFlows.solarToGridW
+      directFlows.solarToGridW
     );
     this._flow(
       "grid-battery", moving["grid-battery"], PATHS.gridBattery,
-      model.directFlows.gridToBatteryW
+      directFlows.gridToBatteryW
     );
     this._flow(
       "grid", moving.grid,
