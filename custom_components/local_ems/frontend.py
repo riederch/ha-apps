@@ -13,7 +13,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 STATIC_URL = "/local_ems"
 CARD_PATH = "/local_ems/local-ems-flow-card.mjs"
-CARD_VERSION = "0.5.0b3"
+CARD_VERSION = "0.5.0b4"
 CARD_RESOURCE_URL = f"{CARD_PATH}?v={CARD_VERSION}"
 _REGISTERED_KEY = "_flow_frontend_registered"
 
