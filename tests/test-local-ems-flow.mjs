@@ -339,6 +339,7 @@ test("solar-to-grid animates only unavoidable PV export", () => {
   });
   assert.equal(routes.solarToGridW, 1800);
   assert.equal(routes.gridToBatteryW, 0);
+  assert.equal(routes.solarToBatteryW, 600);
 });
 
 test("grid-to-battery shows unavoidable grid charging when PV is insufficient", () => {
@@ -348,6 +349,7 @@ test("grid-to-battery shows unavoidable grid charging when PV is insufficient", 
   });
   assert.equal(routes.gridToBatteryW, 1500);
   assert.equal(routes.solarToGridW, 0);
+  assert.equal(routes.solarToBatteryW, 0);
 });
 
 test("solar can cover battery charging: do not claim grid-to-battery transfer", () => {
@@ -356,6 +358,7 @@ test("solar can cover battery charging: do not claim grid-to-battery transfer", 
     gridState: "on_grid", gridContact: true,
   });
   assert.equal(routes.gridToBatteryW, 0);
+  assert.equal(routes.solarToBatteryW, 0);
 });
 
 test("battery discharge could cause all export: do not claim solar-to-grid transfer", () => {
@@ -374,17 +377,49 @@ test("mixed PV/battery grid export only assigns the guaranteed PV share", () => 
   assert.equal(routes.solarToGridW, 1700);
 });
 
-test("EPS or a missing grid suppresses all direct grid links", () => {
+test("PV to battery shows guaranteed PV share beyond maximum grid import", () => {
+  const model = inferDirectFlows({
+    gridW: 700, solarW: 3200, batteryW: -2400,
+    gridState: "on_grid", gridContact: true,
+  });
+  assert.equal(model.solarToBatteryW, 1700);
+  assert.equal(model.gridToBatteryW, 0);
+  assert.equal(model.solarToGridW, 0);
+});
+
+test("PV to battery during export includes the measured charging power", () => {
+  const model = inferDirectFlows({
+    gridW: -1400, solarW: 3200, batteryW: -1100,
+    gridState: "on_grid", gridContact: true,
+  });
+  assert.equal(model.solarToBatteryW, 1100);
+  assert.equal(model.solarToGridW, 1400);
+});
+
+test("PV to battery does not invent charging from PV without production", () => {
+  for (const { gridW, solarW, batteryW } of [
+    { gridW: 1200, solarW: 0, batteryW: -600 },
+    { gridW: -300, solarW: 1600, batteryW: 550 },
+    { gridW: 1800, solarW: 200, batteryW: -800 },
+  ]) {
+    const routes = inferDirectFlows({
+      gridW, solarW, batteryW, gridState: "on_grid", gridContact: true,
+    });
+    assert.equal(routes.solarToBatteryW, 0);
+  }
+});
+
+test("EPS or a missing grid suppresses all conservatively inferred paths", () => {
   for (const state of ["eps", "grid_lost"]) {
     assert.deepEqual(inferDirectFlows({
       gridW: -2000, solarW: 3000, batteryW: -1000,
       gridState: state, gridContact: null,
-    }), { gridToBatteryW: 0, solarToGridW: 0 });
+    }), { gridToBatteryW: 0, solarToGridW: 0, solarToBatteryW: 0 });
   }
   assert.deepEqual(inferDirectFlows({
     gridW: 2300, solarW: 300, batteryW: -2000,
     gridState: "on_grid", gridContact: false,
-  }), { gridToBatteryW: 0, solarToGridW: 0 });
+  }), { gridToBatteryW: 0, solarToGridW: 0, solarToBatteryW: 0 });
 });
 
 test("unknown sensor data never creates fictitious direct power flows", () => {
@@ -408,15 +443,17 @@ test("model includes vendor-neutral inferred direct routes", () => {
   const chargeModel = buildFlowModel(states, attributes);
   assert.equal(chargeModel.directFlows.gridToBatteryW, 1500);
   assert.equal(chargeModel.directFlows.solarToGridW, 0);
+  assert.equal(chargeModel.directFlows.solarToBatteryW, 0);
   states["sensor.kng_p"] = mk(-2700, "W");
   states["sensor.pv"] = mk(3500, "W");
   states["sensor.battery"] = mk(300, "W"); // inverted to charging
   const exportModel = buildFlowModel(states, attributes);
   assert.equal(exportModel.directFlows.solarToGridW, 2700);
   assert.equal(exportModel.directFlows.gridToBatteryW, 0);
+  assert.equal(exportModel.directFlows.solarToBatteryW, 300);
 });
 
-test("card exposes both additional physical path tracks and directional animations", async () => {
+test("card exposes all three direct path tracks and directional animations", async () => {
   const { readFileSync } = await import("node:fs");
   const { fileURLToPath } = await import("node:url");
   const { resolve } = await import("node:path");
@@ -424,13 +461,16 @@ test("card exposes both additional physical path tracks and directional animatio
     fileURLToPath(new URL(".", import.meta.url)),
     "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
   ), "utf8");
-  for (const path of ["solar-grid", "grid-battery"]) {
+  for (const path of ["solar-grid", "grid-battery", "solar-battery"]) {
     assert.match(source, new RegExp('id="' + path + '-track"'));
     assert.match(source, new RegExp('id="' + path + '-dots"'));
     assert.ok(source.includes('this._flow(\n      "' + path + '"'));
   }
   assert.ok(source.includes('"solar-grid": directFlows.solarToGridW >= 5'));
   assert.ok(source.includes('"grid-battery": directFlows.gridToBatteryW >= 5'));
+  assert.ok(source.includes('"solar-battery": directFlows.solarToBatteryW >= 5'));
+  assert.ok(source.includes('solarBattery: "M50 24 V74"'));
+  assert.ok(source.includes("#solar-battery-dots{stroke:var(--ems-solar);}"));
   assert.match(source, /showZeroLines \|\| moving\[name\]/);
 });
 
@@ -448,17 +488,23 @@ test("regression: cached old flow-model without directFlows does not crash card"
   assert.deepEqual(safeDirectFlows(legacy), {
     solarToGridW: 0,
     gridToBatteryW: 0,
+    solarToBatteryW: 0,
   });
   assert.deepEqual(safeDirectFlows({ directFlows: null }), {
     solarToGridW: 0,
     gridToBatteryW: 0,
+    solarToBatteryW: 0,
   });
   assert.deepEqual(safeDirectFlows({
-    directFlows: { solarToGridW: "120", gridToBatteryW: NaN },
-  }), { solarToGridW: 0, gridToBatteryW: 0 });
+    directFlows: { solarToGridW: "120", gridToBatteryW: NaN, solarToBatteryW: "300" },
+  }), { solarToGridW: 0, gridToBatteryW: 0, solarToBatteryW: 0 });
+  assert.deepEqual(safeDirectFlows({
+    directFlows: { solarToGridW: 1300, gridToBatteryW: 400, solarToBatteryW: 900 },
+  }), { solarToGridW: 1300, gridToBatteryW: 400, solarToBatteryW: 900 });
+  // The pre-PV-to-battery module must not crash the newer card.
   assert.deepEqual(safeDirectFlows({
     directFlows: { solarToGridW: 1300, gridToBatteryW: 400 },
-  }), { solarToGridW: 1300, gridToBatteryW: 400 });
+  }), { solarToGridW: 1300, gridToBatteryW: 400, solarToBatteryW: 0 });
 });
 
 test("nested flow-model ESM import is cache-busted with manifest version", async () => {

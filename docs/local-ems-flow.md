@@ -273,3 +273,54 @@ EPS-Sicherheitslogik bleiben davon unberührt.
 **Aktualisierung:** Local EMS in HACS auf 0.5.0b3 aktualisieren,
 Home Assistant neu starten und die Dashboard-Seite im Browser bzw.
 der Companion-App vollständig neu laden.
+
+
+## Direkte PV → Batterie-Verbindung (ab 0.5.0b4)
+
+Die Flow-Card enthält nun außerdem einen **mittigen, vertikalen Pfad
+von Solar zu Batterie**. Bei zuordenbarer PV-Ladeleistung erscheinen
+animierte, PV-farbene Punkte von **oben nach unten**. Alle vier
+Knoten und die bisherigen fünf Verbindungen bleiben erhalten.
+
+### Bestimmung der PV-Ladeleistung
+
+Die vorhandenen Leistungssensoren messen PV-Produktion, Netzbezug bzw.
+Einspeisung und Batterieleistung, aber nicht eine eigene physikalische
+PV-zu-Batterie-Leitung. Deshalb animieren wir aus denselben Gründen
+wie bei den anderen Direktpfaden nur einen **konservativen Mindestwert**:
+
+`pv_to_battery_min = min(pv, max(0, battery_charge - grid_import))`
+
+- Nur wenn die Batterie lädt (`batteryW < 0`) und PV produziert
+  (`solarW > 0`), kann der Pfad aktiviert werden.
+- Steht für die Batterieladung weniger Netzleistung zur Verfügung
+  als die Batterie aufnimmt, muss der Rest bei vollständiger Bilanz
+  mindestens aus PV stammen.
+- Bei Netzeinspeisung (`gridW < 0`) ist der aktuelle Netzbezug
+  gleich null und der PV-Pfad kann entsprechend aktiv sein.
+- Bei gleichzeitigem Netzbezug kann die Animation ausbleiben,
+  **obwohl ein realer PV-Anteil die Batterie lädt**: Eine
+  garantierte Zuordnung ist aus Summenzählern nicht möglich.
+- Fehlen Messwerte oder ist die Netz-/EPS-Situation unklar,
+  wird der direkte Pfad nicht animiert. Insbesondere modelliert
+  Local EMS einen möglichen Generatoranschluss nicht als eigene
+  Energiequelle; deshalb werden während EPS keine geschätzten
+  PV-zu-Batterie-Anteile erfunden.
+- Bei `display_zero_lines: true` bleibt die Verbindung grau sichtbar.
+
+Die Darstellung ist **nur Monitoring**. Sie beeinflusst weder die
+15-Minuten-Spitzenberechnung noch Verbraucher, Batterie oder
+EPS-Sicherheitssteuerung.
+
+### Installation
+
+Local EMS auf `0.5.0b4` aktualisieren und Home Assistant neu starten.
+Die bestehende Ressource
+`/local_ems/local-ems-flow-card.mjs?v=0.5.0b4` lädt jetzt auch
+`flow-model.mjs?v=0.5.0b4`, um den zuvor beobachteten
+Chrome-ESM-Cachefehler zu vermeiden. Danach Dashboard vollständig
+neu laden. Unveränderte Kartenkonfiguration:
+
+```yaml
+type: custom:local-ems-flow-card
+```
