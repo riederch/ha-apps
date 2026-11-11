@@ -11,8 +11,8 @@ export ROCKET_WORKERS=2
 
 backup_sqlite_before_upgrade() {
     local migration_version="1.37.5"
-    local database="/data/db.sqlite3"
-    local backup_dir="/data/migration-backups"
+    local database="${DATA_FOLDER}/db.sqlite3"
+    local backup_dir="${DATA_FOLDER}/migration-backups"
     local backup="${backup_dir}/db.sqlite3.pre-${migration_version}"
     local backup_tmp="${backup}.tmp"
     local quick_check
