@@ -28,6 +28,7 @@ jobs:
         run: |
           bash -n cloudflared_auth/rootfs/etc/s6-overlay/s6-rc.d/prepare/run.sh
           bash -n cloudflared_auth/rootfs/run.sh
+          bash cloudflared_auth/tests/test_auth_guards.sh
           sh -n gitea_mcp/run.sh
           sh -n gitea_runner/run.sh
           sh -n gitea_runner/clean-env.sh
