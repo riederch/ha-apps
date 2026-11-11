@@ -8,6 +8,7 @@
 UPSTREAM_PREPARE="${UPSTREAM_PREPARE:-/etc/s6-overlay/s6-rc.d/prepare/run-upstream.sh}"
 AUTH_PROXY_CONFIG="/tmp/nginx-origin-auth.conf"
 AUTH_PROXY_PORT_BASE=19080
+AUTH_EXPECTED_ROUTES='[]'
 
 if [[ ! -r "${UPSTREAM_PREPARE}" ]]; then
     bashio::exit.nok "Upstream Cloudflared prepare script not found: ${UPSTREAM_PREPARE}"
@@ -92,6 +93,25 @@ validateOriginAuth() {
             fi
         fi
     done
+}
+
+# The upstream main() returns before validating local hosts when a
+# remote-managed tunnel token is set. Refuse misleading local auth settings
+# before calling that upstream entrypoint (fail closed, no token logging).
+rejectRemoteManagedAuth() {
+    bashio::config.has_value 'tunnel_token' || return 0
+    bashio::config.has_value 'additional_hosts' || return 0
+
+    local protected_count
+    protected_count="$(bashio::jq "$(bashio::app.config)" \
+        '[.additional_hosts[]? | select((.basic_auth_username // "") != "" or (.basic_auth_password // "") != "" or (.bearer_token // "") != "")] | length')" || \
+        bashio::exit.nok "Cannot verify local authentication options in remote-managed tunnel mode"
+    if ! [[ "${protected_count}" =~ ^[0-9]+$ ]]; then
+        bashio::exit.nok "Cannot verify local authentication options in remote-managed tunnel mode"
+    fi
+    if (( protected_count > 0 )); then
+        bashio::exit.nok "Local Basic/Bearer credentials do not apply to remote-managed tunnels; remove them and configure Cloudflare Access instead"
+    fi
 }
 
 writeAuthProxyHeader() {
@@ -187,6 +207,7 @@ prepareOriginAuthHosts() {
     local proxy_port
     local proxy_count=0
 
+    AUTH_EXPECTED_ROUTES='[]'
     rm -f "${AUTH_PROXY_CONFIG}"
 
     for additional_host in "${additional_hosts[@]}"; do
@@ -217,6 +238,14 @@ prepareOriginAuthHosts() {
             proxy_port=$((AUTH_PROXY_PORT_BASE + proxy_count))
             appendAuthProxyServer "${proxy_port}" "${service}" "${auth_type}" "${expected_authorization}"
 
+            # Verify each protected hostname against exactly one generated
+            # cloudflared ingress route. Count-only checks can miss duplicates.
+            AUTH_EXPECTED_ROUTES="$(jq -nc \
+                --argjson existing "${AUTH_EXPECTED_ROUTES}" \
+                --arg hostname "${hostname}" \
+                --arg service "http://127.0.0.1:${proxy_port}" \
+                '$existing + [{hostname: $hostname, service: $service}]')"
+
             sanitized_host=$(bashio::jq "${sanitized_host}" \
                 ".service = \"http://127.0.0.1:${proxy_port}\"")
 
@@ -240,6 +269,21 @@ prepareOriginAuthHosts() {
     additional_hosts=("${sanitized_hosts[@]}")
 }
 
+validateProtectedIngressRoutes() {
+    local config_path="$1"
+    # A duplicate hostname ahead of the protected route would bypass auth.
+    # Require each protected hostname exactly once at its expected loopback.
+    if ! jq -e --argjson expected "${AUTH_EXPECTED_ROUTES}" '
+        (.ingress | type == "array") and
+        (. as $config |
+            all($expected[]; . as $route |
+                ([ $config.ingress[] | select(.hostname == $route.hostname) ] |
+                    length == 1 and .[0].service == $route.service)))
+    ' "${config_path}" >/dev/null; then
+        bashio::exit.nok "Protected Cloudflared ingress hostname or route mismatch; refusing to start"
+    fi
+}
+
 validateConfigAndSetVars() {
     validateConfigAndSetVars_upstream
     validateOriginAuth
@@ -253,17 +297,16 @@ createConfig() {
     createConfig_upstream
 
     if [[ -f "${AUTH_PROXY_CONFIG}" ]]; then
+        validateProtectedIngressRoutes "${default_config}"
         local protected_ingress_count
-        protected_ingress_count=$(jq '[.ingress[] | select(.service | startswith("http://127.0.0.1:190"))] | length' "${default_config}")
-        if [[ "${protected_ingress_count}" == "0" ]]; then
-            bashio::exit.nok "Authentication proxy was prepared but no protected ingress route was written to Cloudflared config"
-        fi
-        bashio::log.info "Verified ${protected_ingress_count} protected ingress route(s) in Cloudflared config"
+        protected_ingress_count="$(jq -n --argjson routes "${AUTH_EXPECTED_ROUTES}" '$routes | length')"
+        bashio::log.info "Verified ${protected_ingress_count} unique protected ingress hostname(s) in Cloudflared config"
     fi
 
     additional_hosts=("${original_additional_hosts[@]}")
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    rejectRemoteManagedAuth
     main "$@"
 fi

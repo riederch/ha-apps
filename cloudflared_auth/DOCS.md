@@ -81,6 +81,28 @@ The `7.0.19-rch1` update uses the upstream app's cloudflared `2026.10.3` and inc
 - The upstream debug statement that prints complete `additional_hosts` entries is redacted so configured credentials are not emitted to the app log.
 - Password and token fields use the Home Assistant `password` schema type.
 
+## Fail-closed authentication safeguards (7.0.21-rch2)
+
+- The upstream entrypoint exits immediately for `tunnel_token` (remote-managed)
+  tunnels. A new pre-entrypoint check therefore refuses to start when a
+  remotely managed tunnel is combined with Basic/Bearer credentials in
+  `additional_hosts`. This prevents an apparently protected but unprotected
+  external service. Configure the required authentication in **Cloudflare Access**
+  for remote-managed tunnels, or use a locally managed tunnel.
+- Each protected hostname must now appear **exactly once** in the generated
+  Cloudflared ingress list and point to its corresponding loopback Nginx proxy.
+  Missing, duplicate, or shadowed ingress rules stop startup.
+- Locally managed, correctly configured routes retain the same behavior,
+  credentials and data paths. Nginx HTTPS-origin certificate validation is
+  **not** modified in this change; see the separate security-hardening issue.
+- The new unit tests cover remote/local modes, Basic/Bearer conflict, several
+  protected routes, partial/duplicate ingress, and missing configuration.
+  Runtime verification still requires an actual protected-service test.
+
+Rollback: stop the app and reinstall `7.0.21-rch1`; note that doing so also
+removes these fail-closed checks. Retain `/data` and test protected ingress
+again before reconnecting external clients.
+
 ## Runtime verification
 
 On startup the app verifies that:
