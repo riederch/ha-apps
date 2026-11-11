@@ -42,7 +42,7 @@ Bestehende Installationen werden bei Versionswechseln nach Möglichkeit ohne man
 ## Aktuelle Runtime-Stände
 
 - Gitea: `1.27.2`
-- Gitea MCP: `1.8.0`
+- Gitea MCP: `1.11.0`
 - Gitea Runner: `5.4.1` (App `5.4.1-rch1`, bereinigte Job-Prozessumgebung)
 - Vaultwarden: `1.37.4`
 - Cloudflared: `2026.10.7`
@@ -51,7 +51,7 @@ Bestehende Installationen werden bei Versionswechseln nach Möglichkeit ohne man
 
 Die Gitea-App verwendet die etablierte Gitea-App aus [`alexbelgium/hassio-addons`](https://github.com/alexbelgium/hassio-addons/tree/master/gitea) als Runtime-Image.
 
-Gitea MCP verwendet den offiziellen Gitea-MCP-Server `1.8.0` aus `docker.gitea.com/gitea-mcp-server`; der lokale Code ist nur der Home-Assistant-Startwrapper.
+Gitea MCP verwendet den offiziellen Gitea-MCP-Server `1.11.0` aus `docker.gitea.com/gitea-mcp-server`; lokaler Wrapper und HTTP-Bridge ergänzen Home-Assistant-Konfiguration, strukturierte Dateiausgaben und Binär-Uploads.
 
 Gitea Runner verwendet den offiziellen Runner `5.4.1` aus `docker.io/gitea/runner`; der lokale Code ergänzt nur Home-Assistant-Konfiguration, persistente Registrierung und einen bewusst unprivilegierten Host-Mode.
 
