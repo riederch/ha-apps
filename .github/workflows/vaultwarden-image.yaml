@@ -31,6 +31,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
 
+      - name: Assert release-policy safety and negative cases
+        shell: bash
+        run: python3 -m unittest discover -s vaultwarden/tests -p test_publish_policy.py -v
+
       - name: Read app metadata
         id: meta
         shell: bash
