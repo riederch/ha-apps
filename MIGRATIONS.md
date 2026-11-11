@@ -11,6 +11,41 @@
 **Rollback:** Stop the app, restore the matching database snapshot and (if required) app data from the full backup, then run the previous app image. Do not start 1.37.4 on a database migrated by 1.37.5 without restoring the backup first.
 
 
+
+## 2026-11-11 – Gitea MCP `1.8.0-rch3` → `1.11.0-rch1`
+
+- Pinnt die offizielle Container-Binärquelle `docker.gitea.com/gitea-mcp-server:1.11.0`, kein `latest`-Tag. Die Veröffentlichung des höheren Go-Modulstands alleine bestätigt kein verfügbares passendes Container-Image.
+- Die vorhandene HTTP-Bridge, per-Request-Bearer-Weiterleitung, `read_only`-Filterung und Binär-Upload-Tools bleiben vorerst unverändert. Es werden keine Gitea- oder HA-Repositories migriert.
+- Port `8080/mcp`, lokaler Backend-Port `8081`, bisherige App-Optionen und Token-Verwendung bleiben erhalten. Nach dem Neustart Toolschemas und MCP-Verbindung des Clients neu laden.
+- Ein Docker-Build kann keine Protokollinkompatibilität beweisen oder ausschliessen. Auf einer Testinstallation `tools/list`, `get_file_contents` in Chunks, Fehlerfall bei ungültigem Token, schreibgeschützten Modus und einen kontrollierten Binär-Upload gegen ein Test-Repository prüfen.
+
+**Rollback:** App `1.8.0-rch3` erneut installieren und MCP-Clients neu verbinden. Eine lokale Datenmigration der MCP-App ist nicht nötig.
+
+
+
+## 2026-11-11 – Gitea Runner `5.0.0-rch3` → `5.4.1-rch1`
+
+- Official upstream runtime: `docker.io/gitea/runner:5.4.1` for `amd64` and `aarch64`. The supported CLI flags `register --token-file`, `--no-interactive` and `daemon --labels` remain documented in the runner 5.x series.
+- Local launch, `clean-env.sh` allowlist and unprivileged host-mode execution remain unchanged. No Docker socket, supervisor permission or privileged capabilities are added.
+- Existing `/data/.runner`, `/data/.ha-runner-instance`, runner name, labels and app options are preserved. The runner should not require a fresh registration.
+- Before the upgrade, finish current jobs and back up Home Assistant app state. Verify the runner reconnects, retains the `ha-runner:host` label, and can run a trusted `builtin:checkout` test job. Verify that Supervisor tokens are not inherited into jobs.
+- CI image builds and shell tests are necessary but not sufficient to validate live job execution.
+
+**Rollback:** Stop the updated app and use `5.0.0-rch3` with the original persistent registration. Avoid rollback while jobs are executing.
+
+
+
+## 2026-11-11 – Cloudflared Origin Auth `7.0.19-rch1` → `7.0.21-rch1`
+
+- Base image: `ghcr.io/homeassistant-apps/cloudflared/{arch}:7.0.21`, packaging cloudflared `2026.10.7`.
+- The upstream `prepare/run.sh` has the same Git blob SHA in 7.0.19 and 7.0.21; the original entrypoint guard and our import/redaction mechanism are unchanged.
+- All local Basic/Bearer authentication option keys, protected-host processing, tunnel credential paths, and port bindings remain unchanged. `/data/cert.pem` and `/data/tunnel.json` are not migrated.
+- Create a Home Assistant app backup before upgrade. After the update, verify a protected Basic and Bearer route each return HTTP 401 without credentials, allow valid credentials, and that an unprotected route and tunnel reconnect still function.
+- Known inherited limitations remain: HTTPS origin certificate verification is disabled in the existing Nginx overlay and in the upstream Cloudflared ingress configuration. Remotely managed tunnels selected with `tunnel_token` do not use local ingress authentication settings. Handle security hardening in a separately validated change.
+
+**Rollback:** Stop the app and use the prior app image with unchanged `/data`. Test the reconnect and local authorization routes again; review any externally changed Cloudflare tunnel configuration separately.
+
+
 ## 2026-11-02 – Gitea Runner `5.0.0-rch2` → `5.0.0-rch3`
 
 - Vor dem Runner-Start entfernt ein `env -i`-Entrypoint alle geerbten Home-Assistant-Umgebungsvariablen mit Ausnahme einer Positivliste (`PATH`, `HOME`, `TZ`); auch `SUPERVISOR_TOKEN` / `HASSIO_TOKEN` gelangen dadurch nicht mehr per Environment in Host-Mode-Jobs.

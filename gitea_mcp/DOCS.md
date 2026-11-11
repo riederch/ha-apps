@@ -1,6 +1,6 @@
 # Gitea MCP
 
-Diese App ist ein schlanker Home-Assistant-Wrapper um den offiziellen Gitea MCP Server `1.8.0`.
+Diese App ist ein schlanker Home-Assistant-Wrapper um den offiziellen Gitea MCP Server `1.11.0`.
 Sie startet den Upstream-Server im Streamable-HTTP-Modus und reicht den vom MCP-Client gesendeten Bearer-Token pro Request an Gitea weiter. Der Token wird nicht in der Home-Assistant-App-Konfiguration gespeichert.
 
 ## Voraussetzungen
@@ -38,6 +38,31 @@ Authorization: Bearer <GITEA_TOKEN>
 
 Der Token wird dadurch nicht dauerhaft in der App gespeichert.
 
+## Update von 1.8.0-rch3 auf 1.11.0-rch1
+
+Die offizielle MCP-Runtime wird auf das publizierte Multi-Arch-Container-Image
+`docker.gitea.com/gitea-mcp-server:1.11.0` umgestellt.
+Die bestehende Python-Bridge, `read_only`, das Anmeldeverfahren (Bearer-Token
+pro Request), der lokale HTTP-Backend-Port 8081 und der öffentliche
+MCP-Endpunkt `/mcp` auf Port 8080 bleiben unverändert. Die App speichert
+weiterhin selbst keine Repository- oder Gitea-Daten.
+
+**Validierung vor dem Merge:** Docker-Image muss auf `amd64` und `aarch64`
+bauen. Nach Installation die vollständige MCP-Tool-Liste erneut laden
+und gegen die eigene Gitea-Instanz prüfen: `tools/list`,
+`get_file_contents` mit `structuredContent`, Abschnittslesen,
+`read_only`, fehlerhafte Token (401) und die beiden Binär-Upload-Tools
+einschliesslich SHA-256. Die aktuelle Bridge wird nicht neu geschrieben,
+um die Kompatibilitätsänderungen isoliert prüfen zu können.
+
+Der aktuell veröffentlichte Go-Modulstand kann gegenüber dem verfügbaren
+Container-Tag voraus sein. Diese App pinnt absichtlich das tatsächlich
+veröffentlichte und per CI getestete Image-Tag, nicht `latest` oder
+ein nur als Modul angekündigtes Release.
+
+Rollback: `1.8.0-rch3`; die App hat keine eigene Datenbank und keine
+Datenmigration. Danach den MCP-Client erneut verbinden.
+
 ## Migration von 1.6.0
 
 Die App speichert selbst keinen Zustand. Beim Upgrade auf `1.8.0-rch1` bleiben `gitea_host`, `insecure`, `read_only`, `debug`, Port `8080`, `/mcp` und der Bearer-Token-Passthrough unverändert.
@@ -57,13 +82,13 @@ MCP-Client
     |
     | Authorization: Bearer <GITEA_TOKEN>
     v
-Gitea MCP 1.8.0 :8080/mcp
+Gitea MCP 1.11.0 :8080/mcp
     |
     v
 Gitea
 ```
 
-Die App enthält keinen eigenen Fork des MCP-Servers und kompiliert keinen fremden Quellcode. Das offizielle Multi-Arch-Image `docker.gitea.com/gitea-mcp-server:1.8.0` dient als Binärquelle; der lokale Wrapper ergänzt nur Home-Assistant-Konfiguration und Startparameter.
+Die App enthält keinen eigenen Fork des MCP-Servers und kompiliert keinen fremden Quellcode. Das offizielle Multi-Arch-Image `docker.gitea.com/gitea-mcp-server:1.11.0` dient als Binärquelle; der lokale Wrapper ergänzt nur Home-Assistant-Konfiguration und Startparameter.
 
 ## ChatGPT
 

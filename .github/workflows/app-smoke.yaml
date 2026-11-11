@@ -29,12 +29,22 @@ jobs:
         run: |
           bash -n cloudflared_auth/rootfs/etc/s6-overlay/s6-rc.d/prepare/run.sh
           bash -n cloudflared_auth/rootfs/run.sh
+          bash cloudflared_auth/tests/test_auth_guards.sh
           sh -n gitea_mcp/run.sh
           sh -n gitea_runner/run.sh
           sh -n gitea_runner/clean-env.sh
           sh gitea_runner/tests/test_clean_env.sh
           python3 -m py_compile gitea_mcp/mcp_bridge.py gitea_mcp/binary_upload.py
           python3 -m unittest discover -s gitea_mcp/tests -v
+      - name: Exercise Basic and Bearer proxy over loopback HTTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v nginx >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends nginx
+          fi
+          bash cloudflared_auth/tests/test_auth_proxy_http.sh
       - name: Verify Cloudflared upstream prepare import
         shell: bash
         run: |
