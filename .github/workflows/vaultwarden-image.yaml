@@ -150,6 +150,20 @@ jobs:
             echo "Main changed during the release build; refusing to replace GHCR tags" >&2
             exit 1
           fi
+      - name: Refuse to overwrite an existing versioned image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/riederch/ha-apps-vaultwarden:${{ steps.meta.outputs.version }}"
+          if docker buildx imagetools inspect "${image}" >"${RUNNER_TEMP}/vw-image-check.out" 2>"${RUNNER_TEMP}/vw-image-check.err"; then
+            echo "The versioned GHCR image already exists: ${image}; refusing to overwrite a released version" >&2
+            exit 1
+          fi
+          if ! grep -Eiq 'manifest unknown|not found' "${RUNNER_TEMP}/vw-image-check.err"; then
+            echo "Cannot reliably determine whether the version tag exists; refusing to publish" >&2
+            sed -n '1,8p' "${RUNNER_TEMP}/vw-image-check.err" >&2
+            exit 1
+          fi
       - name: Publish Vaultwarden multi-arch release
         id: image
         uses: docker/build-push-action@v7.3.0
