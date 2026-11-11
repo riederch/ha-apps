@@ -56,6 +56,10 @@ gate alone as sufficient for a runtime change.
    PR before merging further runtime changes.
 1. **#34** Runner CI trigger fix (no app runtime changes), after review.
 2. **#38** Gitea migration plan (documentation only), after review.
+   Then **#45** (Vaultwarden manual GHCR publishing) must be merged before #33:
+   otherwise merging #33 would immediately publish the new image and
+   overwrite the `:latest` tag. Configure required reviewers for
+   the `vaultwarden-release` GitHub Environment separately.
 3. **#33** Vaultwarden security update, only after a complete recoverable backup
    and test install (login, 2FA, attachments, organizations and rollback).
 4. **#35** Cloudflared runtime update, validate each protected host and tunnel
