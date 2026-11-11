@@ -58,7 +58,7 @@ fi
 
 unset REGISTRATION_TOKEN
 
-echo "Starting Gitea Runner 5.0.0"
+echo "Starting Gitea Runner 5.4.1"
 echo "Instance: $GITEA_INSTANCE_URL"
 echo "Labels: $RUNNER_LABELS"
 echo "Execution mode: host inside the Home Assistant app container"

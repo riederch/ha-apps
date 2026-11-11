@@ -43,7 +43,7 @@ Bestehende Installationen werden bei Versionswechseln nach Möglichkeit ohne man
 
 - Gitea: `1.27.2`
 - Gitea MCP: `1.8.0`
-- Gitea Runner: `5.0.0` (App `5.0.0-rch3`, bereinigte Job-Prozessumgebung)
+- Gitea Runner: `5.4.1` (App `5.4.1-rch1`, bereinigte Job-Prozessumgebung)
 - Vaultwarden: `1.37.4`
 - Cloudflared: `2026.10.3`
 
@@ -53,7 +53,7 @@ Die Gitea-App verwendet die etablierte Gitea-App aus [`alexbelgium/hassio-addons
 
 Gitea MCP verwendet den offiziellen Gitea-MCP-Server `1.8.0` aus `docker.gitea.com/gitea-mcp-server`; der lokale Code ist nur der Home-Assistant-Startwrapper.
 
-Gitea Runner verwendet den offiziellen Runner `5.0.0` aus `docker.io/gitea/runner`; der lokale Code ergänzt nur Home-Assistant-Konfiguration, persistente Registrierung und einen bewusst unprivilegierten Host-Mode.
+Gitea Runner verwendet den offiziellen Runner `5.4.1` aus `docker.io/gitea/runner`; der lokale Code ergänzt nur Home-Assistant-Konfiguration, persistente Registrierung und einen bewusst unprivilegierten Host-Mode.
 
 Die Vaultwarden-App basiert auf [`hassio-addons/app-vaultwarden`](https://github.com/hassio-addons/app-vaultwarden) und verwendet Vaultwarden `1.37.4`.
 

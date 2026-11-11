@@ -1,8 +1,8 @@
-FROM docker.io/gitea/runner:5.0.0
+FROM docker.io/gitea/runner:5.4.1
 
 USER root
 
-ARG BUILD_VERSION=5.0.0-rch3
+ARG BUILD_VERSION=5.4.1-rch1
 ARG BUILD_ARCH=amd64
 
 RUN apk add --no-cache bash ca-certificates git jq python3 tini
@@ -17,6 +17,6 @@ LABEL io.hass.version="${BUILD_VERSION}" \
       io.hass.type="app" \
       io.hass.arch="${BUILD_ARCH}" \
       org.opencontainers.image.source="https://github.com/riederch/ha-apps" \
-      org.opencontainers.image.description="Home Assistant wrapper for Gitea Runner 5.0.0"
+      org.opencontainers.image.description="Home Assistant wrapper for Gitea Runner 5.4.1"
 
 ENTRYPOINT ["/clean-env.sh", "/sbin/tini", "--", "/run-ha.sh"]

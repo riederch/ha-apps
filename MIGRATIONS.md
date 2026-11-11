@@ -1,5 +1,16 @@
 # Migrationen
 
+## 2026-11-11 – Gitea Runner `5.0.0-rch3` → `5.4.1-rch1`
+
+- Official upstream runtime: `docker.io/gitea/runner:5.4.1` for `amd64` and `aarch64`. The supported CLI flags `register --token-file`, `--no-interactive` and `daemon --labels` remain documented in the runner 5.x series.
+- Local launch, `clean-env.sh` allowlist and unprivileged host-mode execution remain unchanged. No Docker socket, supervisor permission or privileged capabilities are added.
+- Existing `/data/.runner`, `/data/.ha-runner-instance`, runner name, labels and app options are preserved. The runner should not require a fresh registration.
+- Before the upgrade, finish current jobs and back up Home Assistant app state. Verify the runner reconnects, retains the `ha-runner:host` label, and can run a trusted `builtin:checkout` test job. Verify that Supervisor tokens are not inherited into jobs.
+- CI image builds and shell tests are necessary but not sufficient to validate live job execution.
+
+**Rollback:** Stop the updated app and use `5.0.0-rch3` with the original persistent registration. Avoid rollback while jobs are executing.
+
+
 ## 2026-11-02 – Gitea Runner `5.0.0-rch2` → `5.0.0-rch3`
 
 - Vor dem Runner-Start entfernt ein `env -i`-Entrypoint alle geerbten Home-Assistant-Umgebungsvariablen mit Ausnahme einer Positivliste (`PATH`, `HOME`, `TZ`); auch `SUPERVISOR_TOKEN` / `HASSIO_TOKEN` gelangen dadurch nicht mehr per Environment in Host-Mode-Jobs.
