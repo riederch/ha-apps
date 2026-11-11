@@ -1,5 +1,17 @@
 # Migrationen
 
+## 2026-11-11 – Gitea Runner `5.0.0-rch3` → `5.4.1-rch1`
+
+- Official upstream runtime: `docker.io/gitea/runner:5.4.1` for `amd64` and `aarch64`. The supported CLI flags `register --token-file`, `--no-interactive` and `daemon --labels` remain documented in the runner 5.x series.
+- Local launch, `clean-env.sh` allowlist and unprivileged host-mode execution remain unchanged. No Docker socket, supervisor permission or privileged capabilities are added.
+- Existing `/data/.runner`, `/data/.ha-runner-instance`, runner name, labels and app options are preserved. The runner should not require a fresh registration.
+- Before the upgrade, finish current jobs and back up Home Assistant app state. Verify the runner reconnects, retains the `ha-runner:host` label, and can run a trusted `builtin:checkout` test job. Verify that Supervisor tokens are not inherited into jobs.
+- CI image builds and shell tests are necessary but not sufficient to validate live job execution.
+
+**Rollback:** Stop the updated app and use `5.0.0-rch3` with the original persistent registration. Avoid rollback while jobs are executing.
+
+
+
 ## 2026-11-11 – Cloudflared Origin Auth `7.0.19-rch1` → `7.0.21-rch1`
 
 - Base image: `ghcr.io/homeassistant-apps/cloudflared/{arch}:7.0.21`, packaging cloudflared `2026.10.7`.
