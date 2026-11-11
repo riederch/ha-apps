@@ -26,6 +26,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
 
+      - name: Check Vaultwarden update consistency
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_version="$(awk -F '[:"]' '/^FROM "vaultwarden\/server:/{print $3}' vaultwarden/Dockerfile)"
+          backup_version="$(awk -F'"' '/local migration_version=/{print $2}' vaultwarden/rootfs/etc/s6-overlay/s6-rc.d/vaultwarden/run)"
+          test -n "$runtime_version" && test "$runtime_version" = "$backup_version"
+          bash -n vaultwarden/rootfs/etc/s6-overlay/s6-rc.d/vaultwarden/run
       - name: Read app metadata
         id: meta
         shell: bash

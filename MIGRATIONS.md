@@ -1,5 +1,16 @@
 # Migrationen
 
+## 2026-11-11 – Vaultwarden `0.29.1` → `0.29.2` / Server `1.37.4` → `1.37.5`
+
+- **Security:** Upstream Vaultwarden 1.37.5 fixes website-icon and emergency-access issues (advisories GHSA-x9cq-f669-vrr4, GHSA-9pjj-f9g5-3x4c).
+- **Back up before rollout:** Create and verify a full Home Assistant app backup, including `/data`, attachments and configuration. For external PostgreSQL/MariaDB, take a separate database-server backup.
+- **SQLite rollback point:** The startup wrapper creates `/data/migration-backups/db.sqlite3.pre-1.37.5` before server startup and checks source and snapshot with `PRAGMA quick_check`. Existing older snapshots remain untouched; an existing 1.37.5 snapshot is verified before reuse.
+- **Compatibility:** New web-vault support and stricter configuration validation may reject malformed numeric limits and purge schedule values. Inspect custom Vaultwarden settings if startup fails. Test web login, mobile clients, 2FA, organizations, attachments and emergency access.
+- **Release process:** Publish the new multi-architecture image, confirm the Home Assistant app catalog offers `0.29.2`, then perform the upgrade on the target installation.
+
+**Rollback:** Stop the app, restore the matching database snapshot and (if required) app data from the full backup, then run the previous app image. Do not start 1.37.4 on a database migrated by 1.37.5 without restoring the backup first.
+
+
 ## 2026-11-02 – Gitea Runner `5.0.0-rch2` → `5.0.0-rch3`
 
 - Vor dem Runner-Start entfernt ein `env -i`-Entrypoint alle geerbten Home-Assistant-Umgebungsvariablen mit Ausnahme einer Positivliste (`PATH`, `HOME`, `TZ`); auch `SUPERVISOR_TOKEN` / `HASSIO_TOKEN` gelangen dadurch nicht mehr per Environment in Host-Mode-Jobs.
