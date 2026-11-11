@@ -21,7 +21,7 @@ bashio::config.has_value() {
         *) return 1 ;;
     esac
 }
-bashio::app.config() { printf '%s' "${OPTIONS_JSON:-{}}"; }
+bashio::app.config() { printf '%s' "${OPTIONS_JSON:-}"; }
 bashio::jq() { jq -cr "$2" <<<"$1"; }
 bashio::exit.nok() { printf 'Rejected as expected: %s\n' "$*" >&2; exit 79; }
 
