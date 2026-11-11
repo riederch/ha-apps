@@ -23,7 +23,7 @@ After the CI workflow is verified on `main`, configure GitHub repository
 Rulesets/Branch protection to require:
 
 - Pull request before merge and at least one independent approval.
-- The **`HA app release gate / verify`** status check, with branch up to date
+- The **`ha-apps-release-gate`** status check, with branch up to date
   before merge, as appropriate for the selected merge strategy.
 - No force push/deletion on `main`; no routine admin bypass.
 - Apply the rules to the default branch and require reviews after the last
