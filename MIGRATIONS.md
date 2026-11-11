@@ -1,5 +1,16 @@
 # Migrationen
 
+## 2026-11-11 – Cloudflared Origin Auth `7.0.19-rch1` → `7.0.21-rch1`
+
+- Base image: `ghcr.io/homeassistant-apps/cloudflared/{arch}:7.0.21`, packaging cloudflared `2026.10.7`.
+- The upstream `prepare/run.sh` has the same Git blob SHA in 7.0.19 and 7.0.21; the original entrypoint guard and our import/redaction mechanism are unchanged.
+- All local Basic/Bearer authentication option keys, protected-host processing, tunnel credential paths, and port bindings remain unchanged. `/data/cert.pem` and `/data/tunnel.json` are not migrated.
+- Create a Home Assistant app backup before upgrade. After the update, verify a protected Basic and Bearer route each return HTTP 401 without credentials, allow valid credentials, and that an unprotected route and tunnel reconnect still function.
+- Known inherited limitations remain: HTTPS origin certificate verification is disabled in the existing Nginx overlay and in the upstream Cloudflared ingress configuration. Remotely managed tunnels selected with `tunnel_token` do not use local ingress authentication settings. Handle security hardening in a separately validated change.
+
+**Rollback:** Stop the app and use the prior app image with unchanged `/data`. Test the reconnect and local authorization routes again; review any externally changed Cloudflare tunnel configuration separately.
+
+
 ## 2026-11-02 – Gitea Runner `5.0.0-rch2` → `5.0.0-rch3`
 
 - Vor dem Runner-Start entfernt ein `env -i`-Entrypoint alle geerbten Home-Assistant-Umgebungsvariablen mit Ausnahme einer Positivliste (`PATH`, `HOME`, `TZ`); auch `SUPERVISOR_TOKEN` / `HASSIO_TOKEN` gelangen dadurch nicht mehr per Environment in Host-Mode-Jobs.
