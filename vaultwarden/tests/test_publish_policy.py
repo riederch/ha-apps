@@ -62,6 +62,10 @@ def audit(text):
             and publisher.count('"${active_main}" != "${GITHUB_SHA}"') >= 2,
             "Publisher must verify main HEAD before and after the build")
 
+    require("Refuse to overwrite an existing versioned image" in publisher
+            and "docker buildx imagetools inspect" in publisher
+            and "manifest unknown|not found" in publisher,
+            "Publisher must refuse existing versioned GHCR tags and fail closed")
     require("docker/login-action" in publisher,
             "Only manual publisher may log in to GHCR")
     require(bool(re.search(r"(?m)^\s+push:\s+true\s*$", publisher)),
@@ -116,6 +120,12 @@ class VaultwardenPublishPolicyTests(unittest.TestCase):
         broken = self.original.replace(
             "cancel-in-progress: false", "cancel-in-progress: true", 1)
         self.assertTrue(any("cancel-in-progress: false" in e for e in audit(broken)))
+
+    def test_catches_version_tag_overwrite_bypass(self):
+        broken = self.original.replace(
+            "docker buildx imagetools inspect",
+            "echo skip-registry-check", 1)
+        self.assertTrue(any("existing versioned" in e for e in audit(broken)))
 
 
 if __name__ == "__main__":

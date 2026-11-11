@@ -42,7 +42,14 @@ und produktive Installation sind unterschiedliche Freigaben.
    Die manuelle Veröffentlichung prüft zusätzlich zweimal, dass der
    ausgelöste Commit noch dem aktuellen `main`-HEAD entspricht.
    Gleichzeitige Publisher-Jobs werden serialisiert.
-6. **Release-Nachweis**: Das Publisher-Job-Summary enthält
+6. **Release-Nachweis und Tag-Schutz**: Vor der Veröffentlichung
+   prüft der Workflow mit `docker buildx imagetools inspect`, ob der
+   exakte Versions-Tag bereits in GHCR existiert. **Existiert er bereits,
+   wird das Release abgebrochen**; bei Netzwerk-/Berechtigungsfehlern,
+   die nicht eindeutig `manifest unknown` oder `not found` melden,
+   wird ebenfalls nicht publiziert. Ein Release muss bei Wiederholung
+   eine neue HA-App-Version verwenden; `:latest` bleibt ein bewusst
+   veränderlicher Verweis. Das Publisher-Job-Summary enthält
    App-Version, Git-Commit und den unveränderlichen Container-Digest.
    Nach dem Publish den Digest sichern, `amd64`/`aarch64` prüfen
    und die App erst im vorgesehenen Wartungsfenster aktualisieren.
