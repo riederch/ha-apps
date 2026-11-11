@@ -1,0 +1,38 @@
+name: HA app release gate
+
+# Always run a small, stable check: path-filtered, heavyweight image builds
+# cannot be used as the only required check (GitHub would leave them pending
+# on PRs that don't touch those paths).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: ha-apps-release-gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+      - name: Verify all app runtime/version relationships
+        run: python3 scripts/verify_ha_app_versions.py
+      - name: Run lightweight security and protocol regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n vaultwarden/rootfs/etc/s6-overlay/s6-rc.d/vaultwarden/run
+          bash -n cloudflared_auth/rootfs/etc/s6-overlay/s6-rc.d/prepare/run.sh
+          bash -n cloudflared_auth/rootfs/run.sh
+          sh -n gitea_mcp/run.sh
+          sh -n gitea_runner/run.sh
+          sh -n gitea_runner/clean-env.sh
+          sh gitea_runner/tests/test_clean_env.sh
+          python3 -m unittest discover -s gitea_mcp/tests -v
+          if [[ -f cloudflared_auth/tests/test_auth_guards.sh ]]; then
+            bash cloudflared_auth/tests/test_auth_guards.sh
+          fi
