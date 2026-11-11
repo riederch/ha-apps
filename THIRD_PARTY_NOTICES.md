@@ -62,13 +62,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 The `cloudflared_auth` app is a small overlay derived from the Unofficial Home Assistant Apps Cloudflared integration:
 
 - Project: `homeassistant-apps/app-cloudflared`
-- Released Home Assistant app base: `7.0.19`
-- Cloudflared runtime: `cloudflare/cloudflared` `2026.10.3`
-- Base image: `ghcr.io/homeassistant-apps/cloudflared/{arch}:7.0.19`
+- Released Home Assistant app base: `7.0.21`
+- Cloudflared runtime: `cloudflare/cloudflared` `2026.10.7`
+- Base image: `ghcr.io/homeassistant-apps/cloudflared/{arch}:7.0.21`
 - Upstream Home Assistant app integration license: MIT
 - Copyright: 2026 Unofficial Home Assistant Apps
 
-The local overlay keeps the released Home Assistant Cloudflared integration as its compatibility base, uses the upstream-patched Cloudflared binary `2026.10.3`, and adds a loopback-only Nginx proxy that enforces optional per-host Basic or Bearer access protection before forwarding requests to internal origin services. Existing tunnel credentials and app options remain compatible with the 7.0.19 base migration.
+The local overlay keeps the released Home Assistant Cloudflared integration as its compatibility base, uses the upstream-patched Cloudflared binary `2026.10.7`, and adds a loopback-only Nginx proxy that enforces optional per-host Basic or Bearer access protection before forwarding requests to internal origin services. Existing tunnel credentials and app options remain compatible with the 7.0.21 base migration.
 
 ### MIT License notice
 

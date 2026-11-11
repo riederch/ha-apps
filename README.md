@@ -45,7 +45,7 @@ Bestehende Installationen werden bei Versionswechseln nach Möglichkeit ohne man
 - Gitea MCP: `1.8.0`
 - Gitea Runner: `5.4.1` (App `5.4.1-rch1`, bereinigte Job-Prozessumgebung)
 - Vaultwarden: `1.37.4`
-- Cloudflared: `2026.10.3`
+- Cloudflared: `2026.10.7`
 
 ## Herkunft
 
@@ -57,7 +57,7 @@ Gitea Runner verwendet den offiziellen Runner `5.4.1` aus `docker.io/gitea/runne
 
 Die Vaultwarden-App basiert auf [`hassio-addons/app-vaultwarden`](https://github.com/hassio-addons/app-vaultwarden) und verwendet Vaultwarden `1.37.4`.
 
-Cloudflared Origin Auth ist ein schlanker Overlay-Fork von [`homeassistant-apps/app-cloudflared`](https://github.com/homeassistant-apps/app-cloudflared), aktuell auf App-Basis `7.0.19` mit Cloudflared `2026.10.3`. Details zu den übernommenen Komponenten stehen in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Cloudflared Origin Auth ist ein schlanker Overlay-Fork von [`homeassistant-apps/app-cloudflared`](https://github.com/homeassistant-apps/app-cloudflared), aktuell auf App-Basis `7.0.21` mit Cloudflared `2026.10.7`. Details zu den übernommenen Komponenten stehen in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Local EMS (HACS-Integration, Beta)
 
