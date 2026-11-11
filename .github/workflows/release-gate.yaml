@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   verify:
-    name: verify
+    name: ha-apps-release-gate
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
