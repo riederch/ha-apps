@@ -13,19 +13,19 @@ network access gateways. A green Docker build verifies only the image; it does
 
 ## Always-running required check
 
-The workflow \`.github/workflows/release-gate.yaml\` is deliberately **not**
+The workflow `.github/workflows/release-gate.yaml` is deliberately **not**
 path-filtered. It checks version-pin/manifest consistency and runs lightweight
 security tests for every PR, even a docs-only PR. This matters because GitHub
 can keep path-filtered required checks in a pending state when their path
 filters do not match.
 
-After the CI workflow is verified on \`main\`, configure GitHub repository
+After the CI workflow is verified on `main`, configure GitHub repository
 Rulesets/Branch protection to require:
 
 - Pull request before merge and at least one independent approval.
-- The **\`HA app release gate / verify\`** status check, with branch up to date
+- The **`HA app release gate / verify`** status check, with branch up to date
   before merge, as appropriate for the selected merge strategy.
-- No force push/deletion on \`main\`; no routine admin bypass.
+- No force push/deletion on `main`; no routine admin bypass.
 - Apply the rules to the default branch and require reviews after the last
   modification.
 
@@ -37,11 +37,11 @@ checks** when they are relevant:
 
 | Change | Additional check |
 |---|---|
-| Vaultwarden | \`Vaultwarden image\`: multi-arch build, snapshot-version consistency and SQLite backup test |
-| Gitea MCP | \`Home Assistant app build smoke tests\`: protocol bridge tests and AMD64/ARM64 image builds |
-| Gitea Runner | \`Home Assistant app build smoke tests\`: cleaned environment, CLI flags and both images |
-| Cloudflared Origin Auth | \`Home Assistant app build smoke tests\`: imported upstream setup, auth guards, Nginx HTTP tests and both images |
-| Local EMS | \`Local EMS tests\` and \`Local EMS integration validation\` |
+| Vaultwarden | `Vaultwarden image`: multi-arch build, snapshot-version consistency and SQLite backup test |
+| Gitea MCP | `Home Assistant app build smoke tests`: protocol bridge tests and AMD64/ARM64 image builds |
+| Gitea Runner | `Home Assistant app build smoke tests`: cleaned environment, CLI flags and both images |
+| Cloudflared Origin Auth | `Home Assistant app build smoke tests`: imported upstream setup, auth guards, Nginx HTTP tests and both images |
+| Local EMS | `Local EMS tests` and `Local EMS integration validation` |
 | Gitea Server | Restore rehearsal and explicit migration approval, **not** just CI |
 
 A reviewer should verify the applicable additional workflow **has completed
@@ -62,7 +62,7 @@ gate alone as sufficient for a runtime change.
 6. **#37** Gitea MCP upgrade with tool refresh, read-only behavior, chunked
    file reads and a controlled binary upload test.
 7. Gitea server **1.27 → 28** only after the isolated DB/data restore rehearsal
-   and the acceptance gates in \`docs/gitea-28-migration-plan.md\`.
+   and the acceptance gates in `docs/gitea-28-migration-plan.md`.
 
 The exact order of independent apps may change if operational constraints
 require it. **Do not merge PR #40**: it exists solely to validate the combined
@@ -91,9 +91,9 @@ matching state snapshot.
 
 Run locally or in CI:
 
-\`\`\`sh
+```sh
 python3 scripts/verify_ha_app_versions.py
-\`\`\`
+```
 
 The script uses only the Python standard library and intentionally refuses
 to guess unknown upstream Gitea image tags or the cloudflared executable
