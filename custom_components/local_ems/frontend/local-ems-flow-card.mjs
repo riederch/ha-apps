@@ -9,10 +9,10 @@
  * See vendor/LICENSE-PFCP and THIRD_PARTY_NOTICES.md.
  */
 import { buildUpstreamBridge, LOCAL_CARD_TYPE, UPSTREAM_ELEMENT,
-  UPSTREAM_CARD_TYPE } from "./pfcp-adapter.mjs?v=0.5.0b5";
+  UPSTREAM_CARD_TYPE } from "./pfcp-adapter.mjs?v=0.5.0b6";
 import "./local-ems-peak-gauge-card.mjs";
 
-const VENDOR_MODULE = "./vendor/power-flow-card-plus-v0.4.0-beta.1.mjs?v=0.5.0b5";
+const VENDOR_MODULE = "./vendor/power-flow-card-plus-v0.4.0-beta.1.mjs?v=0.5.0b6";
 let vendorPromise;
 
 async function loadVendor() {
@@ -82,6 +82,15 @@ export class LocalEMSFlowCard extends HTMLElement {
     }
     if (config.source_mode && !["energy", "ems"].includes(config.source_mode)) {
       throw new Error("Local EMS Flow: source_mode must be energy or ems");
+    }
+    if (config.invert_battery_power !== undefined &&
+        typeof config.invert_battery_power !== "boolean") {
+      throw new Error("Local EMS Flow: invert_battery_power must be true or false");
+    }
+    if (config.entities && config.invert_battery_power !== undefined) {
+      throw new Error(
+        "Local EMS Flow: with manual entities, use entities.battery.invert_state"
+      );
     }
     this._config = { ...config };
     this._configSignature = null;

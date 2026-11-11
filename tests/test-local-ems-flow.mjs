@@ -413,6 +413,102 @@ function bridge(config = {}, states = sample(), attrs = attributes, energy = nul
     attrs, energy, config);
 }
 
+test("per-card inversion overrides the Local EMS battery flag in EMS mode", () => {
+  const states = sample(); // raw -1400 W; metadata previously inverted it
+  const legacy = bridge({ source_mode: "ems" }, states);
+  assert.equal(legacy.model.batteryW, 1400);
+  assert.equal(legacy.hass.states[VIRTUAL.battery].state, "-1400");
+
+  const explicitNoInvert = bridge({
+    source_mode: "ems", invert_battery_power: false,
+  }, states);
+  assert.equal(explicitNoInvert.sourceMode, "ems");
+  assert.equal(explicitNoInvert.model.batteryW, -1400);
+  assert.equal(explicitNoInvert.hass.states[VIRTUAL.battery].state, "1400");
+  assert.equal(explicitNoInvert.config.invert_battery_power, undefined);
+
+  const explicitInvert = bridge({
+    source_mode: "ems", invert_battery_power: true,
+  }, states, { ...attributes, invert_battery_power: false });
+  assert.equal(explicitInvert.model.batteryW, 1400);
+  assert.equal(explicitInvert.hass.states[VIRTUAL.battery].state, "-1400");
+});
+
+test("per-card battery inversion also works when Energy Dashboard has priority", () => {
+  const energy = { energy_sources: [
+    { type: "battery", stat_rate: "sensor.energy_battery", stat_soc: "sensor.soc" },
+  ] };
+  const states = { ...sample(), "sensor.energy_battery": mk(1.5, "kW") };
+  const defaultBridge = bridge({}, states, attributes, energy);
+  assert.equal(defaultBridge.sourceMode, "energy");
+  assert.equal(defaultBridge.model.batteryW, 1500);
+  assert.equal(defaultBridge.hass.states[VIRTUAL.battery].state, "-1500");
+  assert.equal(defaultBridge.sourceMap[VIRTUAL.battery], "sensor.energy_battery");
+
+  const inverted = bridge({ invert_battery_power: true }, states, attributes, energy);
+  assert.equal(inverted.model.batteryW, -1500);
+  assert.equal(inverted.model.directions.battery, "charge");
+  assert.equal(inverted.hass.states[VIRTUAL.battery].state, "1500");
+  assert.equal(inverted.config.invert_battery_power, undefined);
+  assert.equal(inverted.config.entities.battery.invert_state, undefined);
+
+  const notInverted = bridge({ invert_battery_power: false }, states, attributes, energy);
+  assert.equal(notInverted.hass.states[VIRTUAL.battery].state, "-1500");
+  assert.equal(notInverted.model.directions.battery, "discharge");
+  const forcedEms = bridge({
+    source_mode: "ems", invert_battery_power: false,
+  }, states, attributes, energy);
+  assert.equal(forcedEms.model.sources.battery, "sensor.battery");
+  assert.equal(forcedEms.hass.states[VIRTUAL.battery].state, "1400");
+});
+
+test("card override applies after Energy helper inversion, not twice by default", () => {
+  const energy = { energy_sources: [
+    { type: "battery", stat_rate: "sensor.energy_helper",
+      power_config: { stat_rate_inverted: "sensor.energy_raw" } },
+  ] };
+  const states = { ...sample(), "sensor.energy_raw": mk(500, "W") };
+  assert.equal(bridge({}, states, attributes, energy).model.batteryW, -500);
+  assert.equal(bridge({ invert_battery_power: true }, states, attributes, energy)
+    .model.batteryW, 500);
+});
+
+test("battery override keeps zero and unavailable readings intact", () => {
+  const states = sample();
+  states["sensor.battery"] = mk(0, "W");
+  assert.equal(bridge({ source_mode: "ems", invert_battery_power: true }, states)
+    .hass.states[VIRTUAL.battery].state, "0");
+  states["sensor.battery"] = mk("unavailable", "W");
+  assert.equal(bridge({ source_mode: "ems", invert_battery_power: false }, states)
+    .hass.states[VIRTUAL.battery].state, "unavailable");
+});
+
+test("manual PFCP battery inversion stays intact and rejects ambiguous override", async () => {
+  const hass = { states: sample() };
+  const cfg = { entities: {
+    battery: { entity: "sensor.battery", invert_state: true },
+  }};
+  const original = buildUpstreamBridge(hass, null, null, cfg);
+  assert.equal(original.config.entities.battery.invert_state, true);
+  assert.equal(original.hass, hass);
+  assert.throws(() => buildUpstreamBridge(hass, null, null, {
+    ...cfg, invert_battery_power: true,
+  }), /entities.battery.invert_state/);
+
+  globalThis.HTMLElement ??= class {};
+  const { LocalEMSFlowCard } = await import(
+    "../custom_components/local_ems/frontend/local-ems-flow-card.mjs"
+  );
+  const fake = Object.create(LocalEMSFlowCard.prototype);
+  fake._refresh = () => {};
+  assert.throws(() => fake.setConfig({
+    invert_battery_power: "true",
+  }), /true or false/);
+  assert.throws(() => fake.setConfig({
+    ...cfg, invert_battery_power: false,
+  }), /entities.battery.invert_state/);
+});
+
 test("PFCP adapter uses original bidirectional power signs, not the local EMS scheme", () => {
   const b = bridge();
   assert.equal(b.config.type, UPSTREAM_CARD_TYPE);

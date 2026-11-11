@@ -192,6 +192,18 @@ und vorhandene Daten des HA Coordinators. Kein eigenes Messarchiv, kein
 zusätzliches HACS-Card-Repository und keine neuen Steuerungsbefehle.
 [Beschreibung und Grenzen](docs/local-ems-peak-gauge.md).
 
+## Local EMS 0.5.0b6 – Batterie-Vorzeichen in allen Quellenmodi korrigierbar
+
+Die Karte `custom:local-ems-flow-card` unterstützt jetzt die explizite
+Option `invert_battery_power: true|false` auch bei Quellen aus dem
+Energie-Dashboard. Mit `source_mode: ems` und
+`invert_battery_power: false` wird ein Batteriesensor mit
+**positiv = Entladung** korrekt interpretiert, unabhängig von einer
+früheren Invertierungsoption in der Local-EMS-Einrichtung. Bei vollständig
+manueller `entities:`-Konfiguration ist weiterhin
+`entities.battery.invert_state` zu verwenden.
+[Details und Testhinweise](docs/local-ems-flow.md).
+
 ## Local EMS 0.5.0b5 – Original Power Flow Card Plus eingebettet
 
 Unsere bisher selbst gezeichnete `custom:local-ems-flow-card` verwendet ab

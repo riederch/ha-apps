@@ -98,18 +98,22 @@ export function buildFlowModel(states, attributes, preferences = null, options =
   const preferEnergy = options.source_mode !== "ems";
   const sourceEntities = {};
 
-  function power(role, mappedName, invert = false) {
+  function power(role, mappedName, invert = false, invertEnergy = false) {
     const mappingList = mappings[role];
     const entity = explicit[mappedName];
     const hasEnergy = mappingList.length > 0;
     const useEnergy = (preferEnergy && hasEnergy) || (!entity && hasEnergy);
     if (useEnergy) {
       sourceEntities[role] = primaryEntity(mappingList);
-      return powerFromMappings(
+      const mappedPower = powerFromMappings(
         mappingList,
         (id) => toWatts(states, id),
         (id) => !!states?.[id],
       );
+      // HA Energy helpers may already apply their power_config inversion.
+      // Only a deliberately specified card override flips that result.
+      return mappedPower === null ? null :
+        (invertEnergy ? -mappedPower : mappedPower);
     }
     sourceEntities[role] = entity || null;
     return toWatts(states, entity, invert);
@@ -118,7 +122,15 @@ export function buildFlowModel(states, attributes, preferences = null, options =
   const gridW = power("grid", "grid", !!attrs.invert_grid_power);
   const pvValue = power("solar", "solar");
   const solarW = pvValue === null || pvValue < 0 ? null : pvValue;
-  const batteryW = power("battery", "battery", !!attrs.invert_battery_power);
+  // Per-card override applies to the *selected* battery source, even if
+  // Energy Dashboard preferences take priority over Local EMS metadata.
+  // Without an override, preserve the existing source-specific defaults.
+  const batteryOverride = typeof options.invert_battery_power === "boolean";
+  const batteryW = power(
+    "battery", "battery",
+    batteryOverride ? options.invert_battery_power : !!attrs.invert_battery_power,
+    batteryOverride && options.invert_battery_power,
+  );
   const houseValue = power("home", "home");
   const houseW = houseValue === null || houseValue < 0 ? null : houseValue;
   const hasEnergySoc = mappings.soc.length > 0;
