@@ -14,10 +14,9 @@ RUN chmod 0755 /usr/local/bin/gitea-mcp /run.sh
 # Assert that the pinned official binary still supports the transport and
 # authorization flags used by run.sh. Buildx runs this on both architectures.
 RUN set -eu; \
-    /usr/local/bin/gitea-mcp --help >/tmp/gitea-mcp-help.txt 2>&1; \
-    for flag in --host --port --read-only; do \
-        grep -q -- "$flag" /tmp/gitea-mcp-help.txt; \
-    done; \
+    /usr/local/bin/gitea-mcp -t http --port 8081 --host http://127.0.0.1:3000 --read-only --help \
+        >/tmp/gitea-mcp-help.txt 2>&1 \
+        || { cat /tmp/gitea-mcp-help.txt; exit 1; }; \
     rm -f /tmp/gitea-mcp-help.txt
 
 EXPOSE 8080
