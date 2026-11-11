@@ -7,6 +7,17 @@ ARG BUILD_ARCH=amd64
 
 RUN apk add --no-cache bash ca-certificates git jq python3 tini
 
+# Detect upstream CLI flag drift during the multi-arch image build, before
+# upgrading a runner that already owns persistent registration data.
+RUN set -eu; \
+    gitea-runner register --help >/tmp/runner-register-help.txt; \
+    for flag in --no-interactive --instance --token-file --name --labels; do \
+        grep -q -- "$flag" /tmp/runner-register-help.txt; \
+    done; \
+    gitea-runner daemon --help >/tmp/runner-daemon-help.txt; \
+    grep -q -- '--labels' /tmp/runner-daemon-help.txt; \
+    rm -f /tmp/runner-register-help.txt /tmp/runner-daemon-help.txt
+
 COPY run.sh /run-ha.sh
 COPY clean-env.sh /clean-env.sh
 RUN chmod 0755 /run-ha.sh /clean-env.sh
