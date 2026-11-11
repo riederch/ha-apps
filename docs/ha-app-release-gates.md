@@ -58,8 +58,12 @@ gate alone as sufficient for a runtime change.
 2. **#38** Gitea migration plan (documentation only), after review.
    Then **#45** (Vaultwarden manual GHCR publishing) must be merged before #33:
    otherwise merging #33 would immediately publish the new image and
-   overwrite the `:latest` tag. Configure required reviewers for
-   the `vaultwarden-release` GitHub Environment separately.
+   overwrite the `:latest` tag. Configure independent required reviewers
+   and a `main`-only branch policy for the `vaultwarden-release` GitHub
+   Environment, then explicitly set the environment variable
+   `VAULTWARDEN_RELEASE_ENABLED=true`. Without that variable the release
+   intentionally fails closed. The publisher also refuses an already
+   existing versioned GHCR tag and checks that `main` did not move.
 3. **#33** Vaultwarden security update, only after a complete recoverable backup
    and test install (login, 2FA, attachments, organizations and rollback).
 4. **#35** Cloudflared runtime update, validate each protected host and tunnel
