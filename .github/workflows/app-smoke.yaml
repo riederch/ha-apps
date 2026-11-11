@@ -12,6 +12,7 @@ on:
     paths:
       - "cloudflared_auth/**"
       - "gitea_mcp/**"
+      - "gitea_runner/**"
       - ".github/workflows/app-smoke.yaml"
   workflow_dispatch:
 
