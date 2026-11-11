@@ -25,6 +25,6 @@ if [ "$DEBUG" = "true" ]; then
   set -- "$@" -d
 fi
 
-echo "Starting Gitea MCP 1.8.0 for ${GITEA_HOST} behind structured file bridge on port 8080"
+echo "Starting Gitea MCP 1.11.0 for ${GITEA_HOST} behind structured file bridge on port 8080"
 echo "Migration compatibility: endpoint, Home Assistant options and per-request bearer-token forwarding are unchanged"
 exec python3 /usr/local/lib/gitea-mcp-bridge.py "$@"

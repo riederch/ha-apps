@@ -1,5 +1,15 @@
 # Migrationen
 
+## 2026-11-11 – Gitea MCP `1.8.0-rch3` → `1.11.0-rch1`
+
+- Pinnt die offizielle Container-Binärquelle `docker.gitea.com/gitea-mcp-server:1.11.0`, kein `latest`-Tag. Die Veröffentlichung des höheren Go-Modulstands alleine bestätigt kein verfügbares passendes Container-Image.
+- Die vorhandene HTTP-Bridge, per-Request-Bearer-Weiterleitung, `read_only`-Filterung und Binär-Upload-Tools bleiben vorerst unverändert. Es werden keine Gitea- oder HA-Repositories migriert.
+- Port `8080/mcp`, lokaler Backend-Port `8081`, bisherige App-Optionen und Token-Verwendung bleiben erhalten. Nach dem Neustart Toolschemas und MCP-Verbindung des Clients neu laden.
+- Ein Docker-Build kann keine Protokollinkompatibilität beweisen oder ausschliessen. Auf einer Testinstallation `tools/list`, `get_file_contents` in Chunks, Fehlerfall bei ungültigem Token, schreibgeschützten Modus und einen kontrollierten Binär-Upload gegen ein Test-Repository prüfen.
+
+**Rollback:** App `1.8.0-rch3` erneut installieren und MCP-Clients neu verbinden. Eine lokale Datenmigration der MCP-App ist nicht nötig.
+
+
 ## 2026-11-02 – Gitea Runner `5.0.0-rch2` → `5.0.0-rch3`
 
 - Vor dem Runner-Start entfernt ein `env -i`-Entrypoint alle geerbten Home-Assistant-Umgebungsvariablen mit Ausnahme einer Positivliste (`PATH`, `HOME`, `TZ`); auch `SUPERVISOR_TOKEN` / `HASSIO_TOKEN` gelangen dadurch nicht mehr per Environment in Host-Mode-Jobs.
