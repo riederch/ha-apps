@@ -13,10 +13,15 @@ on:
       - "vaultwarden/**"
       - ".github/workflows/vaultwarden-image.yaml"
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the versioned Vaultwarden image and latest tag from main"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   build:
@@ -25,6 +30,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
+
+      - name: Assert release-policy safety and negative cases
+        shell: bash
+        run: python3 -m unittest discover -s vaultwarden/tests -p test_publish_policy.py -v
 
       - name: Check Vaultwarden update consistency
         shell: bash
@@ -61,21 +70,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.2.0
 
-      - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v4.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and publish Vaultwarden
+      - name: Build and validate Vaultwarden (no publishing)
         uses: docker/build-push-action@v7.3.0
         with:
           context: ./vaultwarden
           file: ./vaultwarden/Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: false
           tags: |
             ghcr.io/riederch/ha-apps-vaultwarden:${{ steps.meta.outputs.version }}
             ghcr.io/riederch/ha-apps-vaultwarden:latest
@@ -89,3 +90,121 @@ jobs:
             BUILD_VERSION=${{ steps.meta.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Publishing must be an independent operator action from the default
+  # branch, after the full build job passes. The named environment may be
+  # configured with required reviewers under Settings > Environments.
+  publish:
+    name: publish-vaultwarden
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.publish == true
+    needs: build
+    runs-on: ubuntu-latest
+    environment: vaultwarden-release
+    concurrency:
+      group: vaultwarden-ghcr-release
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout approved main commit
+        uses: actions/checkout@v7.0.1
+      - name: Refuse non-default branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+      - name: Require provisioned release environment
+        shell: bash
+        env:
+          RELEASE_ENABLED: ${{ vars.VAULTWARDEN_RELEASE_ENABLED }}
+        run: |
+          set -euo pipefail
+          if [[ "${RELEASE_ENABLED}" != "true" ]]; then
+            echo "The vaultwarden-release environment is not activated: set its VAULTWARDEN_RELEASE_ENABLED variable to true after configuring required reviewers and branch protection" >&2
+            exit 1
+          fi
+      - name: Refuse stale main checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          active_main="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "${active_main}" || "${active_main}" != "${GITHUB_SHA}" ]]; then
+            echo "Main moved after dispatch or the remote head cannot be verified; refusing release. Dispatch a fresh workflow from main." >&2
+            exit 1
+          fi
+      - name: Read release version and metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(awk '$1 == "version:" { print $2; exit }' vaultwarden/config.yaml)"
+          [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Refusing to publish an invalid Vaultwarden app version" >&2
+            exit 1
+          }
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4.2.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.2.0
+      - name: Log in to GHCR for explicit release
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check main has not advanced before publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          active_main="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "${active_main}" || "${active_main}" != "${GITHUB_SHA}" ]]; then
+            echo "Main changed during the release build; refusing to replace GHCR tags" >&2
+            exit 1
+          fi
+      - name: Refuse to overwrite an existing versioned image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/riederch/ha-apps-vaultwarden:${{ steps.meta.outputs.version }}"
+          if docker buildx imagetools inspect "${image}" >"${RUNNER_TEMP}/vw-image-check.out" 2>"${RUNNER_TEMP}/vw-image-check.err"; then
+            echo "The versioned GHCR image already exists: ${image}; refusing to overwrite a released version" >&2
+            exit 1
+          fi
+          if ! grep -Eiq 'manifest unknown|not found' "${RUNNER_TEMP}/vw-image-check.err"; then
+            echo "Cannot reliably determine whether the version tag exists; refusing to publish" >&2
+            sed -n '1,8p' "${RUNNER_TEMP}/vw-image-check.err" >&2
+            exit 1
+          fi
+      - name: Publish Vaultwarden multi-arch release
+        id: image
+        uses: docker/build-push-action@v7.3.0
+        with:
+          context: ./vaultwarden
+          file: ./vaultwarden/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/riederch/ha-apps-vaultwarden:${{ steps.meta.outputs.version }}
+            ghcr.io/riederch/ha-apps-vaultwarden:latest
+          build-args: |
+            BUILD_ARCH=multiarch
+            BUILD_DATE=${{ steps.meta.outputs.date }}
+            BUILD_DESCRIPTION=Open source password management solution
+            BUILD_NAME=Vaultwarden
+            BUILD_REF=${{ github.sha }}
+            BUILD_REPOSITORY=${{ github.repository }}
+            BUILD_VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Record immutable image digest
+        shell: bash
+        run: |
+          echo "Published version: ${{ steps.meta.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Image digest: ${{ steps.image.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Release commit: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
