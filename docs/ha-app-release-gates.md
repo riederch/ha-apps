@@ -50,6 +50,10 @@ gate alone as sufficient for a runtime change.
 
 ## Planned controlled merge order
 
+0. **#43** this always-running gate and release runbook, after review.
+   Then **#44**: activate the required `ha-apps-release-gate` check and
+   independent PR approvals on `main`. Verify the ruleset with a small
+   PR before merging further runtime changes.
 1. **#34** Runner CI trigger fix (no app runtime changes), after review.
 2. **#38** Gitea migration plan (documentation only), after review.
 3. **#33** Vaultwarden security update, only after a complete recoverable backup
