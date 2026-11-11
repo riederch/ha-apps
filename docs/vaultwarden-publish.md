@@ -59,8 +59,10 @@ und produktive Installation sind unterschiedliche Freigaben.
 - `workflow_dispatch, publish=true, branch!=main`: Build, Publisher-Job
   wird übersprungen; kein Push.
 - `workflow_dispatch, publish=true, branch=main`: Nur nach grünem
-  Build Publish-Job mit `packages:write`, optionaler
-  GitHub-Environment-Freigabe und signalisierter Image-Digest.
+  Build und gesetzter Environment-Variable `VAULTWARDEN_RELEASE_ENABLED=true`,
+  mit zweifacher Prüfung auf unveränderten `main`-HEAD. Nur der serialisierte
+  Publish-Job besitzt `packages:write`. Unabhängige GitHub-Environment-
+  Reviewer müssen zusätzlich administrativ eingerichtet werden.
 
 Die Registry-Tags `:latest` und `:<app-version>` sind technisch
 überschreibbar, die Freigabe basiert daher auf Commit und Digest.
