@@ -103,6 +103,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment: vaultwarden-release
+    concurrency:
+      group: vaultwarden-ghcr-release
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
@@ -114,6 +117,25 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = "refs/heads/main"
+      - name: Require provisioned release environment
+        shell: bash
+        env:
+          RELEASE_ENABLED: ${{ vars.VAULTWARDEN_RELEASE_ENABLED }}
+        run: |
+          set -euo pipefail
+          if [[ "${RELEASE_ENABLED}" != "true" ]]; then
+            echo "The vaultwarden-release environment is not activated: set its VAULTWARDEN_RELEASE_ENABLED variable to true after configuring required reviewers and branch protection" >&2
+            exit 1
+          fi
+      - name: Refuse stale main checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          active_main="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "${active_main}" || "${active_main}" != "${GITHUB_SHA}" ]]; then
+            echo "Main moved after dispatch or the remote head cannot be verified; refusing release. Dispatch a fresh workflow from main." >&2
+            exit 1
+          fi
       - name: Read release version and metadata
         id: meta
         shell: bash
@@ -136,6 +158,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check main has not advanced before publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          active_main="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "${active_main}" || "${active_main}" != "${GITHUB_SHA}" ]]; then
+            echo "Main changed during the release build; refusing to replace GHCR tags" >&2
+            exit 1
+          fi
       - name: Publish Vaultwarden multi-arch release
         id: image
         uses: docker/build-push-action@v7.3.0

@@ -30,12 +30,18 @@ und produktive Installation sind unterschiedliche Freigaben.
    Parameter **`publish` aktivieren**, Workflow starten.
    Ohne diese Option wird nur gebaut. Veröffentlichungen von anderen
    Branches sind selbst bei aktivem Parameter gesperrt.
-5. **Freigabe der GitHub-Umgebung**: Unter
-   **Settings → Environments → `vaultwarden-release`** nötige
-   Schutzregeln einrichten: **Required reviewers**, zulässige
-   Deployment-Branches nur `main`, falls von der GitHub-Plan- und
-   Repo-Konfiguration unterstützt. Ohne diese Admin-Konfiguration
-   erzeugt der Name der Umgebung **allein keine Genehmigungspflicht**.
+5. **Freigabe der GitHub-Umgebung (Pflicht vor dem ersten Publish)**:
+   Unter **Settings → Environments → `vaultwarden-release`**
+   Required reviewers und Deployment-Branches nur `main` einrichten,
+   soweit vom GitHub-Plan unterstützt. Zusätzlich eine
+   **Environment-Variable** `VAULTWARDEN_RELEASE_ENABLED=true`
+   setzen. Ohne diese explizite Aktivierung verweigert der Publish-Job
+   den Start vor dem GHCR-Login (fail closed). Die Variable ersetzt
+   **keine** unabhängige Reviewer-Freigabe; ein noch nicht bestehendes
+   Environment wird bei GitHub sonst ohne Schutzregeln angelegt.
+   Die manuelle Veröffentlichung prüft zusätzlich zweimal, dass der
+   ausgelöste Commit noch dem aktuellen `main`-HEAD entspricht.
+   Gleichzeitige Publisher-Jobs werden serialisiert.
 6. **Release-Nachweis**: Das Publisher-Job-Summary enthält
    App-Version, Git-Commit und den unveränderlichen Container-Digest.
    Nach dem Publish den Digest sichern, `amd64`/`aarch64` prüfen
@@ -53,8 +59,10 @@ und produktive Installation sind unterschiedliche Freigaben.
 - `workflow_dispatch, publish=true, branch!=main`: Build, Publisher-Job
   wird übersprungen; kein Push.
 - `workflow_dispatch, publish=true, branch=main`: Nur nach grünem
-  Build Publish-Job mit `packages:write`, optionaler
-  GitHub-Environment-Freigabe und signalisierter Image-Digest.
+  Build und gesetzter Environment-Variable `VAULTWARDEN_RELEASE_ENABLED=true`,
+  mit zweifacher Prüfung auf unveränderten `main`-HEAD. Nur der serialisierte
+  Publish-Job besitzt `packages:write`. Unabhängige GitHub-Environment-
+  Reviewer müssen zusätzlich administrativ eingerichtet werden.
 
 Die Registry-Tags `:latest` und `:<app-version>` sind technisch
 überschreibbar, die Freigabe basiert daher auf Commit und Digest.
@@ -71,3 +79,23 @@ erhalten. Nur die Image-Version anzuheben, ohne die Freigabeabsicherung,
 würde wieder eine automatische Veröffentlichung auf `main` auslösen.
 
 PR #40 ist ausschließlich Staging und wird nicht produktiv gemergt.
+
+## Nachvollziehbarkeit des Builds
+
+Der Publisher baut das Container-Image **erneut**; er lädt kein bereits
+geprüftes OCI-Image-Artefakt aus dem Validierungsjob hoch. Deshalb
+beweisen gleiche Git-Commit-SHAs alleine **keine bitidentischen Images**:
+die beiden `FROM`-Tags und Systempaket-Repositories können sich zwischen
+den Builds ändern. Der erfolgreiche PR-/Staging-Build ist ein notwendiger
+Test, keine Image-Provenienz-Garantie. Vor dem finalen Publish muss die
+Version samt Quellcode/Abhängigkeiten überprüft werden; nach dem Push
+werden der tatsächlich veröffentlichte Multi-Arch-Digest sowie die
+Architekturen als unveränderlicher Nachweis protokolliert. Eine künftige
+Verbesserung ist Digest-Pinning der beiden Base-Images und eine
+separate überprüfbare Build-Provenienz.
+
+**Achtung:** Nach dem Merge von PR #33 kann die neue App-Version im
+HA-App-Store bereits angeboten werden, bevor das manuell freigegebene
+GHCR-Image existiert. Daher PR #33 und die zugehörige Image-Veröffentlichung
+als gemeinsames Wartungsfenster planen; bis zum Publish keine App-Aktualisierung
+auf der produktiven HA-Instanz durchführen.

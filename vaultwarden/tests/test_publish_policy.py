@@ -48,10 +48,19 @@ def audit(text):
         "inputs.publish == true",
         "needs: build",
         "environment: vaultwarden-release",
+        "group: vaultwarden-ghcr-release",
+        "cancel-in-progress: false",
         "packages: write",
     ]:
         require(required in header,
                 "Publisher must require " + required)
+
+    require("vars.VAULTWARDEN_RELEASE_ENABLED" in publisher
+            and 'RELEASE_ENABLED}" != "true"' in publisher,
+            "Publisher requires an explicitly provisioned release environment")
+    require(publisher.count("git ls-remote --exit-code origin refs/heads/main") >= 2
+            and publisher.count('"${active_main}" != "${GITHUB_SHA}"') >= 2,
+            "Publisher must verify main HEAD before and after the build")
 
     require("docker/login-action" in publisher,
             "Only manual publisher may log in to GHCR")
@@ -91,6 +100,22 @@ class VaultwardenPublishPolicyTests(unittest.TestCase):
         broken = self.original.replace("environment: vaultwarden-release",
                                        "environment: other", 1)
         self.assertTrue(any("environment:" in e for e in audit(broken)))
+
+    def test_catches_missing_provisioning_gate(self):
+        broken = self.original.replace("vars.VAULTWARDEN_RELEASE_ENABLED",
+                                       "vars.UNSAFE_DEFAULT", 1)
+        self.assertTrue(any("provisioned" in e for e in audit(broken)))
+
+    def test_catches_missing_main_head_validation(self):
+        broken = self.original.replace(
+            "git ls-remote --exit-code origin refs/heads/main",
+            "git rev-parse HEAD")
+        self.assertTrue(any("main HEAD" in e for e in audit(broken)))
+
+    def test_catches_parallel_publishers(self):
+        broken = self.original.replace(
+            "cancel-in-progress: false", "cancel-in-progress: true", 1)
+        self.assertTrue(any("cancel-in-progress: false" in e for e in audit(broken)))
 
 
 if __name__ == "__main__":
