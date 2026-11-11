@@ -24,6 +24,36 @@ Gitea 28.0 und 28.3 haben sicherheitsrelevante Korrekturen, unter anderem bei Ac
 - [ ] Git-Version im tatsächlich verwendeten Image verifizieren (Gitea 28 setzt Git ≥ 2.25 voraus); Abgleich von `ghcr.io/alexbelgium/gitea-{arch}` für AMD64/AArch64 und Version `28.3.0`.
 - [ ] Eventuelle individuelle Templates, Webhooks, Mirroring, CI-Secrets und Proxy-Regeln dokumentieren. Live-Benachrichtigungen benötigen künftig den WebSocket-Pfad `/-/ws`; Weiterleitung von Upgrade-/Connection-Headern am Reverse Proxy prüfen.
 
+## Zwischenmaßnahmen bis zum Gitea-28-Upgrade
+
+Die Security-Fixes von 28.0.0 schließen unter anderem
+`CVE-2026-104632` und `CVE-2026-104626` in der Freigabelogik
+von Fork-Pull-Request-Actions. Der Host-Mode-Runner in diesem
+Repository ist **nur für vertrauenswürdige Workflows** gedacht;
+der bereits implementierte `clean-env.sh`-Filter ersetzt keine
+Freigabe-/Isolation für fremden Quellcode.
+
+- [ ] Bis zum Upgrade **keine** ungeprüften Fork-PR-Actions oder fremden
+  Repository-Workflows auf `ha-runner:host` ausführen lassen. Nur
+  kontrollierte Repositories, Branches und Workflows zuweisen und
+  Runner-Zugriffe beziehungsweise Registrierungsrechte prüfen.
+- [ ] Vor Upgrade laufende und ausstehende Actions-Jobs mit unbekannter
+  Herkunft kontrollieren; ein Host-Mode-Job kann die lokale
+  `/data/.runner`-Registrierung und ausdrücklich bereitgestellte
+  CI-Secrets lesen. Keine fremden Workflow-Dateien als Test verwenden.
+- [ ] Nach Upgrade die geänderte Evaluierung von Job-Level-`if`
+  vor Matrix-Expansion prüfen. Zugriffe auf `matrix` gehören künftig
+  in Step-Level-`if` bzw. die `strategy.matrix`-Definition.
+- [ ] Über die neue Auditfunktion entscheiden: optional
+  `[audit] RECORD_OUTPUT = database`. Die Ereignisse werden
+  standardmäßig nach **30 Tagen** gelöscht; eine länger benötigte
+  revisions-/ISO-relevante Aufbewahrung mittels
+  `[audit] RETENTION_DAYS` explizit dokumentieren. Das ist getrennt
+  von den **400 Tagen** für abgeschlossene Actions-Runs.
+
+Quellen: [Offizielle Gitea 28.0.0 Release-Notes](https://blog.gitea.com/release-of-28.0.0/)
+und [Gitea 28.3.0](https://blog.gitea.com/release-of-28.3.0/).
+
 ## Backup und Wiederherstellung (Gate 1)
 
 1. Wartungsfenster definieren; aktive Pushes, Webhooks, Mirrors und Actions-Jobs pausieren.
