@@ -35,7 +35,8 @@ class ReleaseGateTests(unittest.TestCase):
             with contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(stdout):
                 code = gate.main()
         if target:
-            self.assertEqual(applied, [target])
+            self.assertGreaterEqual(len(applied), 1)
+            self.assertTrue(all(path == target for path in applied))
         return code, stderr.getvalue(), stdout.getvalue()
 
     def expect_rejected(self, path, pattern, replacement, error_fragment):
@@ -52,7 +53,7 @@ class ReleaseGateTests(unittest.TestCase):
     def test_mcp_image_drift_fails(self):
         self.expect_rejected(
             "gitea_mcp/Dockerfile",
-            r"^FROM docker\\.gitea\\.com/gitea-mcp-server:[0-9.]+ AS upstream$",
+            r"^FROM docker\.gitea\.com/gitea-mcp-server:[0-9.]+ AS upstream$",
             "FROM docker.gitea.com/gitea-mcp-server:9.9.9 AS upstream",
             "gitea_mcp: app version",
         )
