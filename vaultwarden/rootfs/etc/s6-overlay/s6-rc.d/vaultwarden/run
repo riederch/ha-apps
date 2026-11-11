@@ -10,7 +10,7 @@ export ROCKET_PORT=80
 export ROCKET_WORKERS=2
 
 backup_sqlite_before_upgrade() {
-    local migration_version="1.37.4"
+    local migration_version="1.37.5"
     local database="/data/db.sqlite3"
     local backup_dir="/data/migration-backups"
     local backup="${backup_dir}/db.sqlite3.pre-${migration_version}"
@@ -18,7 +18,14 @@ backup_sqlite_before_upgrade() {
     local quick_check
 
     [[ -f "${database}" ]] || return 0
-    [[ -s "${backup}" ]] && return 0
+    if [[ -s "${backup}" ]]; then
+        # Do not silently accept a corrupt backup from an earlier attempt.
+        quick_check=$(sqlite3 "${backup}" 'PRAGMA quick_check;' 2>/dev/null || true)
+        if [[ "${quick_check}" != "ok" ]]; then
+            bashio::exit.nok "Existing Vaultwarden SQLite rollback backup failed PRAGMA quick_check"
+        fi
+        return 0
+    fi
 
     bashio::log.notice "Preparing one-time SQLite rollback point before Vaultwarden ${migration_version} migration..."
     quick_check=$(sqlite3 "${database}" 'PRAGMA quick_check;' 2>/dev/null || true)

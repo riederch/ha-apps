@@ -1,6 +1,6 @@
 # Gitea Runner
 
-Diese Home-Assistant-App stellt den offiziellen **Gitea Runner 5.0.0** als bewusst schlanken Host-Mode-Runner bereit.
+Diese Home-Assistant-App stellt den offiziellen **Gitea Runner 5.4.1** als bewusst schlanken Host-Mode-Runner bereit.
 
 Der Runner ist fuer vertrauenswuerdige, leichte Workflows gedacht, die direkt im App-Container ausgefuehrt werden. Er bekommt **keinen Docker-Socket, keinen Supervisor-Zugriff und keine privilegierten Rechte**.
 
@@ -73,12 +73,28 @@ Trotzdem sollten nur vertrauenswuerdige Repositories diesen Runner verwenden. Ei
 
 Fuer Workflows, die Docker-Container, Service-Container oder `docker://` Actions benoetigen, sollte spaeter ein separater containerisierter bzw. DinD-Runner eingesetzt werden.
 
+## Update auf 5.4.1
+
+Der Wechsel von `5.0.0-rch3` zu `5.4.1-rch1` tauscht nur die
+offizielle Runner-Runtime aus. Das eigene `clean-env.sh` bleibt erhalten,
+einschliesslich der Positivliste fuer `PATH`, `HOME` und `TZ`.
+Die Registrierung in `/data/.runner`, die Instanzbindung
+`/data/.ha-runner-instance` sowie Labels und Konfiguration werden
+weiterverwendet, eine Neuregistrierung ist nicht geplant.
+
+Vor dem App-Neustart sollten laufende Actions-Jobs beendet sein, da
+der Upgrade-Neustart diese unterbrechen kann. Nach dem Neustart:
+`ha-runner:host` in Gitea pruefen, einen kleinen vertrauenswuerdigen
+`builtin:checkout`-Job starten und bei einem Testjob sicherstellen,
+dass keine Home-Assistant-Supervisor-Tokens in den Job-Umgebungsvariablen
+liegen. Ein CI-Container-Build ersetzt diesen Laufzeittest nicht.
+
 ## Runtime
 
-- Home Assistant app: `5.0.0-rch3`
-- Gitea Runner: `5.0.0`
+- Home Assistant app: `5.4.1-rch1`
+- Gitea Runner: `5.4.1`
 - Python: `3.x` (Alpine package)
-- Upstream image: `docker.io/gitea/runner:5.0.0`
+- Upstream image: `docker.io/gitea/runner:5.4.1`
 - Architectures: `amd64`, `aarch64`
 - Default label: `ha-runner:host`
 - Persistent state: `/data/.runner`
