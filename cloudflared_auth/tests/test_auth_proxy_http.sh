@@ -7,12 +7,22 @@ for command in nginx python3 curl; do
 done
 
 SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/rootfs/etc/s6-overlay/s6-rc.d/prepare/run.sh"
-# shellcheck disable=SC1090
-source <(sed -n '/^writeAuthProxyHeader() {/,/^}/p' "$SCRIPT")
-source <(sed -n '/^appendAuthProxyServer() {/,/^}/p' "$SCRIPT")
-declare -F writeAuthProxyHeader appendAuthProxyServer >/dev/null
-
 TEST_DIR="$(mktemp -d)"
+# Import the complete production wrapper with a stub upstream. Extracting Bash
+# functions by a /^}/ sed pattern is unsafe because Nginx heredocs contain
+# their own unindented closing braces.
+cat >"$TEST_DIR/upstream-prepare.sh" <<'UPSTREAM'
+validateConfigAndSetVars() { :; }
+createConfig() { :; }
+main() { :; }
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
+UPSTREAM
+UPSTREAM_PREPARE="$TEST_DIR/upstream-prepare.sh"
+# shellcheck disable=SC1090
+source "$SCRIPT"
+declare -F writeAuthProxyHeader appendAuthProxyServer >/dev/null
 AUTH_PROXY_CONFIG="$TEST_DIR/nginx.conf"
 origin_pid=""
 cleanup() {
