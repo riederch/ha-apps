@@ -51,6 +51,8 @@ def check_readme(label, expected):
 
 
 def main():
+    # Also make programmatic/repeated invocations deterministic for CI tests.
+    issues.clear()
     # Gitea MCP: binary source, HA manifest, startup banner and README.
     mcp_docker = read("gitea_mcp/Dockerfile")
     mcp = only(r"^FROM docker\.gitea\.com/gitea-mcp-server:([0-9.]+) AS upstream\s*$",
