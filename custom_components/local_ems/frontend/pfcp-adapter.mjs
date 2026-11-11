@@ -6,7 +6,7 @@
  * This is a UI adapter: synthetic sensor states are never registered in HA,
  * never recorded, and never used for control, load shedding or EPS safety.
  */
-import { buildFlowModel } from "./flow-model.mjs?v=0.5.0b5";
+import { buildFlowModel } from "./flow-model.mjs?v=0.5.0b6";
 
 export const VIRTUAL = Object.freeze({
   grid: "sensor.local_ems_ui_pfcp_grid",
@@ -41,7 +41,8 @@ function virtualState(id, value, unit, source = null) {
 function originalOptions(config) {
   // Forward the original card's complete set of advanced options rather than
   // reimplementing its rendering/editing/flow algorithm in Local EMS.
-  const { type, entity, source_mode, use_measured_home, entities, ...rest } = config;
+  const { type, entity, source_mode, use_measured_home,
+    invert_battery_power, entities, ...rest } = config;
   return rest;
 }
 
@@ -49,6 +50,12 @@ function originalOptions(config) {
 export function buildUpstreamBridge(hass, metadataAttributes, energyPreferences, localConfig = {}) {
   const config = localConfig ?? {};
   if (config.entities) {
+    if (config.invert_battery_power !== undefined) {
+      throw new Error(
+        "Local EMS: use entities.battery.invert_state with manual entities; " +
+        "invert_battery_power is for automatic Energy/EMS sources"
+      );
+    }
     // Full upstream YAML is supported as-is, with only the Lovelace type
     // rewritten to point at the separately namespaced vendored element.
     return {

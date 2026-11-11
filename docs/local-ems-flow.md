@@ -1,4 +1,4 @@
-# Local EMS – Original Power Flow Card Plus (ab 0.5.0b5)
+# Local EMS – Original Power Flow Card Plus (0.5.0b6)
 
 ## Herkunft und Architektur
 
@@ -35,7 +35,7 @@ eigene Local-EMS-SVG-Nachbildung mehr.
 
 ## Einrichtung
 
-Nach HACS-Update auf Local EMS `0.5.0b5`, HA-Neustart und
+Nach HACS-Update auf Local EMS `0.5.0b6`, HA-Neustart und
 vollständigem Neuladen des Dashboards bleibt die Kartendeklaration:
 
 ```yaml
@@ -51,6 +51,50 @@ Local-EMS-Sensorzuordnung:
 type: custom:local-ems-flow-card
 source_mode: ems
 ```
+
+### Batterie-Vorzeichen gezielt korrigieren (0.5.0b6)
+
+**Fehlerursache in 0.5.0b5:** Bei automatischer Quellenwahl hatte das
+Home-Assistant-Energie-Dashboard Vorrang. Die Integrationseinstellung
+`Batterieleistung umkehren` wirkte nur, wenn wirklich der Local-EMS-Sensor
+verwendet wurde. Eine Kartenoption `invert_battery_power` wurde bisher
+unverändert an den Originalrenderer durchgereicht und dort ignoriert.
+
+Ab 0.5.0b6 kann die Karte die **tatsächlich gewählte** Batteriesensor-
+Richtung unabhängig von der Quelle explizit vorgeben:
+
+```yaml
+type: custom:local-ems-flow-card
+source_mode: ems
+invert_battery_power: false
+```
+
+- `source_mode: ems` verwendet die in **Local EMS** konfigurierten Quellen,
+  nicht die Sensoren des Energie-Dashboards.
+- `invert_battery_power: false` bedeutet: Batteriesensor **positiv =
+  Entladung**; dies überschreibt auch eine bisherige Local-EMS-Option zum
+  Invertieren der Batterieleistung.
+- `invert_battery_power: true` bedeutet: Batteriesensor **positiv =
+  Ladung**. Die Karte dreht das Vorzeichen zur internen Konvention um.
+- Ohne `invert_battery_power` bleibt die bisherige Logik erhalten: Bei
+  Local-EMS-Sensoren gilt die dortige Invertierung, bei
+  Energie-Dashboard-Sensoren deren eigene `power_config`.
+- Der Override funktioniert **auch ohne** `source_mode: ems`: In diesem Fall
+  invertiert er bei Bedarf das bereits vom Energie-Dashboard aufbereitete
+  Leistungssignal. Bei `power_config.stat_rate_inverted` muss deshalb
+  berücksichtigt werden, dass der Helper das Rohsignal bereits invertiert.
+- Bei **vollständig manuellen** `entities:`-Konfigurationen weiterhin die
+  Originaloption `entities.battery.invert_state` verwenden. Nicht mit der
+  Local-EMS-Option `invert_battery_power` mischen.
+
+Für den Sofar-Sensor `sensor.sofar_batterie_1_leistung`, der zuvor in
+Power Flow Card Plus mit `invert_state: true` genutzt wurde, ist bei
+automatischer Local-EMS-Quellenwahl die Einstellung `false` der passende
+Ausgangspunkt, **sofern** positive Rohwerte tatsächlich Entladung bedeuten.
+Vorzeichen anhand einer echten Lade- und Entladephase verifizieren, nicht aus
+dem momentanen SoC ableiten. Die Änderung betrifft ausschließlich die
+Browserdarstellung; EPS-/Verbraucherschutz und Batterieansteuerung bleiben
+unverändert.
 
 Auch die erweiterten Original-Einstellungen (Farben, Flussgeschwindigkeit,
 einzelne Verbraucher, Animationen, Linien, Layout) werden durchgereicht.
@@ -108,7 +152,7 @@ ersetzt keine EPS-Sicherheitsfunktionen.**
 Nach dem Chrome-Android-Cachefehler in der Version 0.5.0b2
 erhalten der Hauptkartenimport, der EMS-Adapter, das Messmodell
 und die eingebettete Upstream-Datei getrennte Versionskennungen.
-Die Ressource wird unter `/local_ems/local-ems-flow-card.mjs?v=0.5.0b5`
+Die Ressource wird unter `/local_ems/local-ems-flow-card.mjs?v=0.5.0b6`
 registriert. Ein Browser-Neuladen nach dem HA-Neustart wird empfohlen.
 
 ## Credits, Lizenz und Rückbau
