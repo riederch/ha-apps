@@ -41,6 +41,27 @@ Hosts without authentication options are passed through unchanged and use the sa
 
 The update from `7.0.13-rch6` to `7.0.19-rch1` keeps all app option names and persistent tunnel paths unchanged. Existing `/data/cert.pem`, `/data/tunnel.json`, host definitions and Basic/Bearer credentials are therefore reused without conversion. The new upstream base contains the Home-Assistant HTTP storage handling from Cloudflared 7.0.19; the local authentication overlay remains additive.
 
+### Update from 7.0.19-rch1 to 7.0.21-rch1
+
+The upstream base moves to `homeassistant-apps/app-cloudflared` 7.0.21
+(cloudflared `2026.10.7`). The upstream prepare script is identical to
+the 7.0.19 release, so the existing locally added Basic/Bearer auth overlay
+and all app option names remain unchanged. Persistent tunnel files under
+`/data` are reused.
+
+Before upgrading, create a Home Assistant app backup. After upgrading,
+verify tunnel reconnect, a protected Basic host (401 without credentials),
+a protected Bearer host (401 without credentials), authorized access, and an
+unprotected route. Reverting only the app image does not roll back tunnel
+configuration changes made outside the app.
+
+**Security boundary:** This release does not modify the existing
+`proxy_ssl_verify off` behavior for proxied HTTPS origins; verify origin
+trust configuration in a separate hardening change. Cloudflared upstream also
+sets `noTLSVerify` on ingress origin requests. The app's local credentials
+are only enforced for locally managed tunnels; with `tunnel_token` (remotely
+managed), Cloudflare's remote ingress/access policy is authoritative.
+
 Protected hosts currently require an `http://` or `https://` origin URL consisting only of scheme, host and optional port. URL paths in `service` are rejected for protected hosts.
 
 `bearer_token` and Basic authentication are mutually exclusive for a host. For Basic authentication both `basic_auth_username` and `basic_auth_password` are required.
@@ -59,6 +80,28 @@ The `7.0.19-rch1` update uses the upstream app's cloudflared `2026.10.3` and inc
 - Authentication fields are removed before the generated Cloudflared configuration is written.
 - The upstream debug statement that prints complete `additional_hosts` entries is redacted so configured credentials are not emitted to the app log.
 - Password and token fields use the Home Assistant `password` schema type.
+
+## Fail-closed authentication safeguards (7.0.21-rch2)
+
+- The upstream entrypoint exits immediately for `tunnel_token` (remote-managed)
+  tunnels. A new pre-entrypoint check therefore refuses to start when a
+  remotely managed tunnel is combined with Basic/Bearer credentials in
+  `additional_hosts`. This prevents an apparently protected but unprotected
+  external service. Configure the required authentication in **Cloudflare Access**
+  for remote-managed tunnels, or use a locally managed tunnel.
+- Each protected hostname must now appear **exactly once** in the generated
+  Cloudflared ingress list and point to its corresponding loopback Nginx proxy.
+  Missing, duplicate, or shadowed ingress rules stop startup.
+- Locally managed, correctly configured routes retain the same behavior,
+  credentials and data paths. Nginx HTTPS-origin certificate validation is
+  **not** modified in this change; see the separate security-hardening issue.
+- The new unit tests cover remote/local modes, Basic/Bearer conflict, several
+  protected routes, partial/duplicate ingress, and missing configuration.
+  Runtime verification still requires an actual protected-service test.
+
+Rollback: stop the app and reinstall `7.0.21-rch1`; note that doing so also
+removes these fail-closed checks. Retain `/data` and test protected ingress
+again before reconnecting external clients.
 
 ## Runtime verification
 
@@ -80,5 +123,5 @@ If any of these stages fails, the app stops instead of starting with an unprotec
 
 ## Upstream
 
-Current overlay base: `homeassistant-apps/app-cloudflared` 7.0.19.
-Cloudflared runtime: `2026.10.3`.
+Current overlay base: `homeassistant-apps/app-cloudflared` 7.0.21.
+Cloudflared runtime: `2026.10.7`.
