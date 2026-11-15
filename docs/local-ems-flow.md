@@ -1,4 +1,4 @@
-# Local EMS – Original Power Flow Card Plus (0.5.0b6)
+# Local EMS – Original Power Flow Card Plus (0.5.0b7)
 
 ## Herkunft und Architektur
 
@@ -35,7 +35,7 @@ eigene Local-EMS-SVG-Nachbildung mehr.
 
 ## Einrichtung
 
-Nach HACS-Update auf Local EMS `0.5.0b6`, HA-Neustart und
+Nach HACS-Update auf Local EMS `0.5.0b7`, HA-Neustart und
 vollständigem Neuladen des Dashboards bleibt die Kartendeklaration:
 
 ```yaml
@@ -43,24 +43,44 @@ type: custom:local-ems-flow-card
 ```
 
 Die Karte liest standardmäßig die Leistungssensoren aus den Einstellungen
-des Home Assistant Energy Dashboards (`energy/get_prefs`) und verwendet
-ansonsten die konfigurierten Local-EMS-Quellen. Für die explizite
-Local-EMS-Sensorzuordnung:
+des Home Assistant Energy Dashboards (`energy/get_prefs`). **Ausnahme ab
+0.5.0b7: Sobald in Local EMS ein Batteriesensor konfiguriert ist, hat
+dieser zusammen mit seiner Vorzeichenoption und dem konfigurierten SoC
+Vorrang.** Damit wird die Einstellung „Batterieleistung umkehren“
+auch ohne Karten-YAML übernommen. Die übrigen Leistungsquellen behalten
+ihre bisherige Priorität.
+
+Für die explizite Local-EMS-Sensorzuordnung:
 
 ```yaml
 type: custom:local-ems-flow-card
 source_mode: ems
 ```
 
-### Batterie-Vorzeichen gezielt korrigieren (0.5.0b6)
+### Batterie-Vorzeichen aus der Integration (0.5.0b7)
 
-**Fehlerursache in 0.5.0b5:** Bei automatischer Quellenwahl hatte das
+Mit der minimalen Konfiguration `type: custom:local-ems-flow-card`
+wird der in Local EMS konfigurierte Batteriesensor samt
+`battery_power_invert`-Option verwendet. Eine zusätzliche Kartenoption
+ist dafür **nicht** erforderlich. Bei konfiguriertem Batteriesensor
+und Energy-Dashboard-Helfer hat nur die Batterie Vorrang aus EMS;
+PV und Netz dürfen weiterhin vom Energy Dashboard kommen.
+
+Wer bewusst den Energy-Dashboard-Batteriehelfer verwenden will,
+setzt ausdrücklich `source_mode: energy`. Die Einstellung
+`source_mode: ems` erzwingt dagegen **alle** EMS-Leistungsquellen.
+`invert_battery_power` in der Karten-YAML kann die Polarität weiterhin
+explizit überschreiben.
+
+### Batterie-Vorzeichen gezielt korrigieren (0.5.0b7)
+
+**Historischer Fehler in 0.5.0b5 und 0.5.0b6 bei minimaler YAML:** Bei automatischer Quellenwahl hatte das
 Home-Assistant-Energie-Dashboard Vorrang. Die Integrationseinstellung
 `Batterieleistung umkehren` wirkte nur, wenn wirklich der Local-EMS-Sensor
 verwendet wurde. Eine Kartenoption `invert_battery_power` wurde bisher
 unverändert an den Originalrenderer durchgereicht und dort ignoriert.
 
-Ab 0.5.0b6 kann die Karte die **tatsächlich gewählte** Batteriesensor-
+Ab 0.5.0b7 kann die Karte die **tatsächlich gewählte** Batteriesensor-
 Richtung unabhängig von der Quelle explizit vorgeben:
 
 ```yaml
@@ -76,9 +96,9 @@ invert_battery_power: false
   Invertieren der Batterieleistung.
 - `invert_battery_power: true` bedeutet: Batteriesensor **positiv =
   Ladung**. Die Karte dreht das Vorzeichen zur internen Konvention um.
-- Ohne `invert_battery_power` bleibt die bisherige Logik erhalten: Bei
-  Local-EMS-Sensoren gilt die dortige Invertierung, bei
-  Energie-Dashboard-Sensoren deren eigene `power_config`.
+- Ohne `invert_battery_power` gilt bei konfiguriertem EMS-Batteriesensor
+  dessen Invertierung; ohne EMS-Batteriesensor wird auf die Energy-Dashboard-
+  Quelle samt `power_config` zurückgegriffen.
 - Der Override funktioniert **auch ohne** `source_mode: ems`: In diesem Fall
   invertiert er bei Bedarf das bereits vom Energie-Dashboard aufbereitete
   Leistungssignal. Bei `power_config.stat_rate_inverted` muss deshalb
@@ -152,7 +172,7 @@ ersetzt keine EPS-Sicherheitsfunktionen.**
 Nach dem Chrome-Android-Cachefehler in der Version 0.5.0b2
 erhalten der Hauptkartenimport, der EMS-Adapter, das Messmodell
 und die eingebettete Upstream-Datei getrennte Versionskennungen.
-Die Ressource wird unter `/local_ems/local-ems-flow-card.mjs?v=0.5.0b6`
+Die Ressource wird unter `/local_ems/local-ems-flow-card.mjs?v=0.5.0b7`
 registriert. Ein Browser-Neuladen nach dem HA-Neustart wird empfohlen.
 
 ## Credits, Lizenz und Rückbau
