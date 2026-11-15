@@ -149,7 +149,7 @@ test("display formatting works at zero and in kW", () => {
 });
 
 
-test("Energy dashboard power data is preferred over EMS manual mapping", () => {
+test("automatic mode keeps configured EMS battery and SoC, while other sources prefer Energy Dashboard", () => {
   const energy = { energy_sources: [
     { type: "grid", stat_rate: "sensor.energy_grid" },
     { type: "solar", stat_rate: "sensor.energy_solar" },
@@ -170,10 +170,11 @@ test("Energy dashboard power data is preferred over EMS manual mapping", () => {
   assert.equal(model.solarW, 5000);
   assert.equal(model.homeW, undefined);
   assert.equal(model.houseW, 2000);
-  assert.equal(model.batteryW, -700);
-  assert.equal(model.batterySoc, 81);
+  assert.equal(model.batteryW, 1400);
+  assert.equal(model.batterySoc, 64.5);
   assert.equal(model.sources.grid, "sensor.energy_grid");
-  assert.equal(model.directions.battery, "charge");
+  assert.equal(model.sources.battery, "sensor.battery");
+  assert.equal(model.directions.battery, "discharge");
 });
 
 test("manual source_mode overrides configured Energy dashboard power", () => {
@@ -220,7 +221,7 @@ test("inverted energy dashboard power_config works without generated helper", ()
     "sensor.battery_raw": mk(2, "kW"),
     "sensor.energy_soc": mk(55, "%"),
   };
-  const model = buildFlowModel(states, attributes, energy);
+  const model = buildFlowModel(states, attributes, energy, { source_mode: "energy" });
   assert.equal(model.batteryW, -2000);
   assert.equal(model.batterySoc, 55);
 });
@@ -252,7 +253,7 @@ test("weighted battery SOC for multiple storages matches configured capacity", (
     "sensor.soc1": mk(20, "%"),
     "sensor.soc2": mk(80, "%"),
   };
-  const model = buildFlowModel(states, attributes, energy);
+  const model = buildFlowModel(states, attributes, energy, { source_mode: "energy" });
   assert.equal(model.batteryW, 250);
   assert.equal(model.batterySoc, 65);
 });
@@ -413,6 +414,36 @@ function bridge(config = {}, states = sample(), attrs = attributes, energy = nul
     attrs, energy, config);
 }
 
+
+test("battery polarity from EMS config controls the default card despite Energy helpers", () => {
+  const energy = { energy_sources: [
+    { type: "grid", stat_rate: "sensor.energy_grid" },
+    { type: "battery", stat_rate: "sensor.energy_battery", stat_soc: "sensor.energy_soc" },
+  ] };
+  const states = {
+    ...sample(),
+    "sensor.energy_grid": mk(800, "W"),
+    "sensor.energy_battery": mk(600, "W"),
+    "sensor.energy_soc": mk(90, "%"),
+  };
+  const configured = bridge({}, states, attributes, energy);
+  assert.equal(configured.model.sources.battery, "sensor.battery");
+  assert.equal(configured.model.sources.battery_soc, "sensor.soc");
+  assert.equal(configured.model.batteryW, 1400); // EMS config invert_battery_power: true
+  assert.equal(configured.hass.states[VIRTUAL.battery].state, "-1400");
+
+  const uninverted = bridge({}, states,
+    { ...attributes, invert_battery_power: false }, energy);
+  assert.equal(uninverted.model.batteryW, -1400);
+  assert.equal(uninverted.hass.states[VIRTUAL.battery].state, "1400");
+
+  const explicitEnergy = bridge({ source_mode: "energy" }, states, attributes, energy);
+  assert.equal(explicitEnergy.model.sources.battery, "sensor.energy_battery");
+  assert.equal(explicitEnergy.model.sources.battery_soc, "sensor.energy_soc");
+  assert.equal(explicitEnergy.model.batteryW, 600);
+  assert.equal(explicitEnergy.model.batterySoc, 90);
+});
+
 test("per-card inversion overrides the Local EMS battery flag in EMS mode", () => {
   const states = sample(); // raw -1400 W; metadata previously inverted it
   const legacy = bridge({ source_mode: "ems" }, states);
@@ -439,20 +470,24 @@ test("per-card battery inversion also works when Energy Dashboard has priority",
     { type: "battery", stat_rate: "sensor.energy_battery", stat_soc: "sensor.soc" },
   ] };
   const states = { ...sample(), "sensor.energy_battery": mk(1.5, "kW") };
-  const defaultBridge = bridge({}, states, attributes, energy);
+  const defaultBridge = bridge({ source_mode: "energy" }, states, attributes, energy);
   assert.equal(defaultBridge.sourceMode, "energy");
   assert.equal(defaultBridge.model.batteryW, 1500);
   assert.equal(defaultBridge.hass.states[VIRTUAL.battery].state, "-1500");
   assert.equal(defaultBridge.sourceMap[VIRTUAL.battery], "sensor.energy_battery");
 
-  const inverted = bridge({ invert_battery_power: true }, states, attributes, energy);
+  const inverted = bridge({
+    source_mode: "energy", invert_battery_power: true,
+  }, states, attributes, energy);
   assert.equal(inverted.model.batteryW, -1500);
   assert.equal(inverted.model.directions.battery, "charge");
   assert.equal(inverted.hass.states[VIRTUAL.battery].state, "1500");
   assert.equal(inverted.config.invert_battery_power, undefined);
   assert.equal(inverted.config.entities.battery.invert_state, undefined);
 
-  const notInverted = bridge({ invert_battery_power: false }, states, attributes, energy);
+  const notInverted = bridge({
+    source_mode: "energy", invert_battery_power: false,
+  }, states, attributes, energy);
   assert.equal(notInverted.hass.states[VIRTUAL.battery].state, "-1500");
   assert.equal(notInverted.model.directions.battery, "discharge");
   const forcedEms = bridge({
@@ -468,9 +503,11 @@ test("card override applies after Energy helper inversion, not twice by default"
       power_config: { stat_rate_inverted: "sensor.energy_raw" } },
   ] };
   const states = { ...sample(), "sensor.energy_raw": mk(500, "W") };
-  assert.equal(bridge({}, states, attributes, energy).model.batteryW, -500);
-  assert.equal(bridge({ invert_battery_power: true }, states, attributes, energy)
-    .model.batteryW, 500);
+  assert.equal(bridge({ source_mode: "energy" }, states, attributes, energy)
+    .model.batteryW, -500);
+  assert.equal(bridge({
+    source_mode: "energy", invert_battery_power: true,
+  }, states, attributes, energy).model.batteryW, 500);
 });
 
 test("battery override keeps zero and unavailable readings intact", () => {
@@ -598,7 +635,7 @@ test("EMS settings override energy dashboard mappings only with source_mode ems"
   };
   assert.equal(bridge({}, states, attributes, energy).hass.states[VIRTUAL.grid].state,
     "3000");
-  const mapped = bridge({}, states, attributes, energy);
+  const mapped = bridge({ source_mode: "energy" }, states, attributes, energy);
   assert.equal(mapped.hass.states[VIRTUAL.battery].state, "500");
   const own = bridge({ source_mode: "ems" }, states, attributes, energy);
   assert.equal(own.hass.states[VIRTUAL.grid].state, "-307");

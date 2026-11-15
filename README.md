@@ -192,6 +192,22 @@ und vorhandene Daten des HA Coordinators. Kein eigenes Messarchiv, kein
 zusätzliches HACS-Card-Repository und keine neuen Steuerungsbefehle.
 [Beschreibung und Grenzen](docs/local-ems-peak-gauge.md).
 
+
+## Local EMS 0.5.0b7 – Batterie-Vorzeichen aus der Integration
+
+Die Energieflusskarte übernimmt bei automatischer Quellenwahl jetzt den
+**konfigurierten Local-EMS-Batteriesensor einschließlich der Option
+„Batterieleistung umkehren“ und des zugeordneten SoC**, auch wenn das
+Home Assistant Energy Dashboard einen eigenen Batterie-Leistungshelfer
+enthält. Die Standardkarte benötigt dafür weiterhin nur
+`type: custom:local-ems-flow-card`. Netz- und PV-Quellen können
+unverändert aus dem Energy Dashboard kommen.
+
+`source_mode: energy` erzwingt bei Bedarf die Energy-Dashboard-
+Quellen; `source_mode: ems` verwendet die EMS-Zuordnungen für alle
+Leistungswerte. Ein `invert_battery_power`-Override in der Karten-YAML
+bleibt möglich. Details: [Energieflusskarte](docs/local-ems-flow.md).
+
 ## Local EMS 0.5.0b6 – Batterie-Vorzeichen in allen Quellenmodi korrigierbar
 
 Die Karte `custom:local-ems-flow-card` unterstützt jetzt die explizite

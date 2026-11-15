@@ -9,10 +9,10 @@
  * See vendor/LICENSE-PFCP and THIRD_PARTY_NOTICES.md.
  */
 import { buildUpstreamBridge, LOCAL_CARD_TYPE, UPSTREAM_ELEMENT,
-  UPSTREAM_CARD_TYPE } from "./pfcp-adapter.mjs?v=0.5.0b6";
+  UPSTREAM_CARD_TYPE } from "./pfcp-adapter.mjs?v=0.5.0b7";
 import "./local-ems-peak-gauge-card.mjs";
 
-const VENDOR_MODULE = "./vendor/power-flow-card-plus-v0.4.0-beta.1.mjs?v=0.5.0b6";
+const VENDOR_MODULE = "./vendor/power-flow-card-plus-v0.4.0-beta.1.mjs?v=0.5.0b7";
 let vendorPromise;
 
 async function loadVendor() {
