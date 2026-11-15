@@ -141,7 +141,10 @@ export function buildFlowModel(states, attributes, preferences = null, options =
   const houseValue = power("home", "home");
   const houseW = houseValue === null || houseValue < 0 ? null : houseValue;
   const hasEnergySoc = mappings.soc.length > 0;
-  const useEnergySoc = (preferEnergy && hasEnergySoc) ||
+  // Keep SoC paired with the configured EMS battery in automatic mode.
+  // Explicit source_mode: energy retains the Energy Dashboard SoC.
+  const useEnergySoc = (preferEnergy && hasEnergySoc &&
+    (options.source_mode === "energy" || !explicit.battery_soc)) ||
     (!explicit.battery_soc && hasEnergySoc);
   const batterySoc = useEnergySoc
     ? percentageFromMappings(mappings.soc, (id) => toPercent(states, id))
