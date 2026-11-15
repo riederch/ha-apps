@@ -98,11 +98,17 @@ export function buildFlowModel(states, attributes, preferences = null, options =
   const preferEnergy = options.source_mode !== "ems";
   const sourceEntities = {};
 
-  function power(role, mappedName, invert = false, invertEnergy = false) {
+  function power(role, mappedName, invert = false, invertEnergy = false,
+    preferConfigured = false) {
     const mappingList = mappings[role];
     const entity = explicit[mappedName];
     const hasEnergy = mappingList.length > 0;
-    const useEnergy = (preferEnergy && hasEnergy) || (!entity && hasEnergy);
+    // For battery, the EMS source includes a deliberately configured polarity.
+    // In automatic mode it must not be silently replaced by an Energy helper,
+    // otherwise invert_battery_power from the EMS configuration is ignored.
+    // source_mode: energy explicitly restores Energy Dashboard priority.
+    const useEnergy = (preferEnergy && hasEnergy && !preferConfigured) ||
+      (!entity && hasEnergy);
     if (useEnergy) {
       sourceEntities[role] = primaryEntity(mappingList);
       const mappedPower = powerFromMappings(
@@ -130,6 +136,7 @@ export function buildFlowModel(states, attributes, preferences = null, options =
     "battery", "battery",
     batteryOverride ? options.invert_battery_power : !!attrs.invert_battery_power,
     batteryOverride && options.invert_battery_power,
+    options.source_mode !== "energy",
   );
   const houseValue = power("home", "home");
   const houseW = houseValue === null || houseValue < 0 ? null : houseValue;
