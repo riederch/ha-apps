@@ -192,3 +192,11 @@ type: custom:local-ems-peak-gauge-card
 ```
 
 [Details zum neuen Gauge](local-ems-peak-gauge.md).
+
+## Historische Entscheidungen und Gründe (16.11.2026)
+
+Das versionierte [Local-EMS-Entscheidungspaket](../custom_components/local_ems/decisions/README.md)
+hält ursprüngliche Ziele, verworfene Alternativen, technische Randbedingungen,
+Quellenabdeckung und offene Abnahmen fest. Es ist eine historische Referenz und
+ersetzt keine aktuelle Funktionsprüfung. Der Löschbereitschaftstest nach A1
+ist dort ausdrücklich als noch nicht bestanden dokumentiert.
